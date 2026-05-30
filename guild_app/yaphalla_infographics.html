@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <meta charset="UTF-8"/>
+  <meta name="description" content="얍할라 종합 인포그래픽 - AFK Journey 덱 빌딩 가이드">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ROIDER GUILD - 얍할라 종합 인포그래픽</title>
+  <link rel="stylesheet" href="header_standard.css">
+  <link rel="stylesheet" href="common_style.css">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+  <script src="push_manager.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="i18n_added.js" defer></script>
+<style>
+/* ── 헤더 ───────────────────────────────────────── */
+header{display:flex!important;justify-content:space-between!important;align-items:center!important;
+  padding:10px 15px!important;background:#121721!important;border-bottom:1px solid #2a3242!important;
+  min-height:clamp(48px,8vw,60px)!important;box-sizing:border-box!important;position:fixed!important;
+  top:0!important;width:100%;z-index:2000!important;box-shadow:0 2px 10px rgba(0,0,0,.3)!important;}
+.header-left{display:flex!important;align-items:center!important;gap:12px!important;}
+.logo{white-space:nowrap!important;color:#f4c430;font-weight:bold;font-size:clamp(14px,3vw,18px);text-decoration:none;}
+
+/* ── 페이지 타이틀 ───────────────────────────────── */
+.page-hdr{margin-bottom:clamp(18px,3vw,28px);}
+.page-hdr h2{color:#f4c430;font-size:clamp(17px,3.8vw,23px);margin:0 0 5px;
+  font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.page-hdr p{color:#666;font-size:clamp(11px,2vw,13px);margin:0;}
+.live-badge{display:inline-flex;align-items:center;gap:4px;
+  background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);
+  border-radius:20px;padding:2px 9px;font-size:clamp(9px,1.6vw,11px);color:#00e676;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#00e676;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── 블로그 피드 리스트 ──────────────────────────── */
+.feed-list{display:flex;flex-direction:column;gap:clamp(14px,3vw,22px);}
+
+/* ── 블로그 카드 ────────────────────────────────── */
+.blog-card{
+  background:#13171f;
+  border:1px solid #1e2535;
+  border-radius:clamp(10px,2vw,16px);
+  overflow:hidden;
+  cursor:pointer;
+  transition:border-color .25s, box-shadow .25s, transform .2s;
+  display:flex;
+  flex-direction:column;
+}
+.blog-card:hover{
+  border-color:#2e3a52;
+  box-shadow:0 6px 28px rgba(0,0,0,.45);
+  transform:translateY(-2px);
+}
+
+/* 상단 이미지 프리뷰 */
+.card-thumb{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  background:#0d1018;
+  overflow:hidden;
+  flex-shrink:0;
+}
+.card-thumb img{
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:top;
+  display:block;
+  transition:transform .35s ease;
+}
+.blog-card:hover .card-thumb img{transform:scale(1.03);}
+
+/* 이미지 없을 때 플레이스홀더 */
+.card-thumb-placeholder{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;color:#2a3242;
+}
+.card-thumb-placeholder .ph-icon{font-size:clamp(28px,5vw,40px);}
+.card-thumb-placeholder .ph-txt{font-size:clamp(10px,1.8vw,12px);color:#2a3242;}
+
+/* 이미지 개수 뱃지 */
+.img-count-badge{
+  position:absolute;bottom:8px;right:8px;
+  background:rgba(0,0,0,.7);color:#fff;
+  font-size:clamp(9px,1.6vw,11px);padding:2px 8px;
+  border-radius:10px;backdrop-filter:blur(4px);
+}
+
+/* 카드 본문 영역 */
+.card-body{
+  padding:clamp(12px,2.5vw,18px);
+  flex:1;display:flex;flex-direction:column;gap:10px;
+}
+
+/* 작성자 행 */
+.card-meta{display:flex;align-items:center;gap:8px;}
+.meta-avatar{
+  width:clamp(24px,4vw,32px);height:clamp(24px,4vw,32px);
+  border-radius:50%;overflow:hidden;flex-shrink:0;
+  background:linear-gradient(135deg,#5865f2,#eb459e);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(11px,2vw,14px);font-weight:bold;color:#fff;
+}
+.meta-avatar img{width:100%;height:100%;object-fit:cover;}
+.meta-info{flex:1;min-width:0;}
+.meta-author{font-size:clamp(11px,2vw,13px);font-weight:600;color:#c0c8d8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.meta-date{font-size:clamp(9px,1.6vw,11px);color:#444;margin-top:1px;}
+
+/* 채널 뱃지 */
+.channel-badge{font-size:clamp(9px,1.5vw,10px);background:rgba(88,101,242,.12);
+  color:#7083c0;border:1px solid rgba(88,101,242,.2);border-radius:10px;
+  padding:2px 8px;white-space:nowrap;}
+
+/* 본문 텍스트 미리보기 */
+.card-excerpt{
+  font-size:clamp(11px,2vw,13px);color:#7a8a9a;
+  line-height:1.65;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  overflow:hidden;
+  word-break:break-word;
+}
+.card-excerpt b{color:#b0bac8;}
+
+/* ── 상세 모달 ──────────────────────────────────── */
+.detail-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.82);z-index:8500;
+  align-items:flex-start;justify-content:center;
+  padding:clamp(12px,3vw,24px);overflow-y:auto;
+}
+.detail-overlay.active{display:flex;}
+
+.detail-modal{
+  background:#13171f;border:1px solid #2a3242;
+  border-radius:clamp(12px,2vw,18px);
+  width:100%;max-width:720px;
+  margin:auto;overflow:hidden;
+  box-shadow:0 12px 50px rgba(0,0,0,.6);
+}
+
+/* 상세 이미지 슬라이더 */
+.detail-gallery{position:relative;background:#0d1018;}
+.gallery-slide{display:none;width:100%;}
+.gallery-slide.active{display:block;}
+.gallery-slide img{width:100%;height:auto;max-height:70vh;object-fit:contain;display:block;}
+.gallery-nav{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(0,0,0,.55);color:#fff;border:none;
+  width:36px;height:36px;border-radius:50%;font-size:16px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;
+}
+.gallery-nav:hover{background:rgba(0,0,0,.8);}
+.gallery-prev{left:8px;} .gallery-next{right:8px;}
+.gallery-dots{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  display:flex;gap:5px;
+}
+.gallery-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;}
+.gallery-dot.active{background:#fff;}
+.gallery-counter{position:absolute;top:8px;right:10px;
+  background:rgba(0,0,0,.6);color:#fff;font-size:11px;
+  padding:2px 8px;border-radius:10px;}
+
+/* 상세 내용 */
+.detail-content{padding:clamp(16px,3vw,24px);}
+.detail-meta{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.detail-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;
+  background:linear-gradient(135deg,#5865f2,#eb459e);
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;color:#fff;}
+.detail-avatar img{width:100%;height:100%;object-fit:cover;}
+.detail-author{font-size:clamp(13px,2.5vw,15px);font-weight:bold;color:#e6e6e6;}
+.detail-date  {font-size:clamp(10px,1.8vw,12px);color:#555;margin-top:2px;}
+.detail-body{color:#b8c5d0;font-size:clamp(12px,2.2vw,14px);line-height:1.8;word-break:break-word;}
+.detail-body p{margin:0 0 10px;}
+.detail-body a{color:#7db3ff;text-decoration:none;word-break:break-all;}
+.detail-body a:hover{text-decoration:underline;}
+.detail-body b{color:#e6e6e6;}
+.detail-close-btn{
+  display:block;width:100%;margin-top:18px;padding:clamp(10px,2vw,13px);
+  background:rgba(255,255,255,.06);color:#aaa;border:1px solid #2a3242;
+  border-radius:8px;font-size:clamp(13px,2.3vw,15px);cursor:pointer;transition:all .2s;
+}
+.detail-close-btn:hover{background:rgba(255,255,255,.12);color:#fff;}
+
+/* 닫기 버튼 */
+.detail-x{
+  position:sticky;top:0;left:100%;display:block;width:36px;height:36px;
+  background:rgba(0,0,0,.6);border:none;border-radius:50%;color:#fff;
+  font-size:18px;cursor:pointer;margin:10px 10px 0 auto;
+  display:flex;align-items:center;justify-content:center;z-index:1;
+}
+
+/* ── 스켈레톤 ───────────────────────────────────── */
+.sk-card{background:#13171f;border:1px solid #1e2535;border-radius:clamp(10px,2vw,16px);overflow:hidden;margin-bottom:clamp(14px,3vw,22px);}
+.sk{background:#1c2230;border-radius:6px;animation:shimmer 1.6s infinite;}
+.sk-thumb{width:100%;aspect-ratio:16/9;}
+.sk-body{padding:clamp(12px,2.5vw,18px);}
+.sk-line{height:12px;margin-bottom:8px;border-radius:4px;}
+@keyframes shimmer{0%{opacity:.35}50%{opacity:.6}100%{opacity:.35}}
+
+/* 빈 상태 */
+.empty-state{text-align:center;padding:70px 20px;color:#444;}
+.empty-icon{font-size:52px;margin-bottom:14px;}
+.empty-state p{font-size:clamp(12px,2.2vw,14px);line-height:1.7;}
+
+/* ── 반응형 ─────────────────────────────────────── */
+@media(min-width:700px){
+  /* 2열 그리드 */
+  .feed-list{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:clamp(14px,2.5vw,20px);
+  }
+}
+@media(min-width:1100px){
+  .feed-list{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:699px){
+  .blog-card{flex-direction:row;max-height:110px;}
+  .card-thumb{width:clamp(90px,30vw,130px);aspect-ratio:1/1;flex-shrink:0;}
+  .card-body{padding:10px 12px;}
+  .card-excerpt{-webkit-line-clamp:2;}
+}
+</style>
+</head>
+<body>
+<div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"></div></div>
+
+<!-- 헤더 -->
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" id="menuTrigger" onclick="toggleNav()" aria-label="메뉴">☰</button>
+    <a href="main.html" class="logo">⚔️ ROIDER</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="lang-toggle" id="langToggle" onclick="toggleLangPage()" title="언어 전환">🌐 EN</button>
+    <button class="profile-change-btn" id="profileChangeBtn" style="display:none;"
+            onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+  </div>
+</header>
+
+<!-- 사이드바 -->
+<div class="app-container">
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-user-info">
+    <div id="userAvatar" class="user-avatar"
+         style="width:40px;height:40px;border-radius:50%;background:#2a3242;
+                display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px;">👤</div>
+    <span id="userName" class="u-name">...</span>
+    <span id="myRoleBadge" class="role-badge"></span>
+  </div>
+  <button class="logout-btn" data-i18n="menu_logout" onclick="logout()"
+    style="width:100%;padding:10px;font-size:13px;border:1px solid #444;
+           background:rgba(255,255,255,.05);color:#ccc;border-radius:8px;cursor:pointer;">로그아웃</button>
+  <div class="nav-container">
+    <a href="main.html"   class="nav-link" data-i18n="menu_home">홈</a>
+    <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+    <div class="nav-folder">
+      <div class="nav-folder-header" id="navFolderWeekly">
+        <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+        <span class="nav-folder-arrow">▶</span>
+      </div>
+      <div class="nav-folder-children" id="navFolderWeeklyChildren">
+        <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+        <a href="weekly.html"     class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+      </div>
+    </div>
+    <a href="yaphalla_infographics.html" class="nav-link active" data-i18n="menu_infographics">얍할라 종합 인포그래픽</a>
+    <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+    <a href="admin.html"   class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+  </div>
+  <script>
+  (function(){
+    var K='roider_nav_weekly_open',h=document.getElementById('navFolderWeekly'),
+        c=document.getElementById('navFolderWeeklyChildren');
+    if(!h||!c)return;
+    var isOpen=localStorage.getItem(K)==='1';
+    function setOpen(v){h.classList.toggle('open',v);c.style.maxHeight=v?c.scrollHeight+'px':'0';
+      c.style.overflow='hidden';localStorage.setItem(K,v?'1':'0');}
+    c.style.transition='max-height .3s ease';c.style.overflow='hidden';setOpen(isOpen);
+    h.addEventListener('click',function(){setOpen(!h.classList.contains('open'));});
+  })();
+  </script>
+</nav>
+
+<!-- 메인 콘텐츠 -->
+<main class="main-content">
+  <div class="page-hdr">
+    <h2 data-i18n="menu_infographics">
+      🎮 얍할라 종합 인포그래픽
+      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    </h2>
+    <p data-i18n="infographics_subtitle">Discord 채널 글이 자동으로 반영됩니다</p>
+  </div>
+
+  <!-- 스켈레톤 -->
+  <div id="skeletonArea" class="feed-list">
+    <div class="sk-card"><div class="sk sk-thumb"></div><div class="sk-body"><div class="sk sk-line" style="width:40%"></div><div class="sk sk-line" style="width:80%"></div><div class="sk sk-line" style="width:65%"></div></div></div>
+    <div class="sk-card"><div class="sk sk-thumb"></div><div class="sk-body"><div class="sk sk-line" style="width:35%"></div><div class="sk sk-line" style="width:75%"></div><div class="sk sk-line" style="width:55%"></div></div></div>
+    <div class="sk-card"><div class="sk sk-thumb"></div><div class="sk-body"><div class="sk sk-line" style="width:45%"></div><div class="sk sk-line" style="width:70%"></div></div></div>
+  </div>
+
+  <!-- 피드 -->
+  <div class="feed-list" id="feedList" style="display:none;"></div>
+
+  <!-- 빈 상태 -->
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="empty-icon">🤖</div>
+    <p>아직 표시할 인포그래픽이 없습니다.<br>
+       <span style="color:#333;font-size:12px;">Discord 봇이 채널에서 글을 감지하면<br>자동으로 여기에 표시됩니다.</span></p>
+  </div>
+</main>
+</div>
+
+<!-- ── 상세 보기 모달 ─────────────────────────────── -->
+<div class="detail-overlay" id="detailOverlay" onclick="handleOverlayClick(event)">
+  <div class="detail-modal" id="detailModal">
+    <button class="detail-x" onclick="closeDetail()">✕</button>
+
+    <!-- 이미지 갤러리 -->
+    <div class="detail-gallery" id="detailGallery"></div>
+
+    <!-- 내용 -->
+    <div class="detail-content">
+      <div class="detail-meta">
+        <div class="detail-avatar" id="detailAvatar"></div>
+        <div>
+          <div class="detail-author" id="detailAuthor"></div>
+          <div class="detail-date"   id="detailDate"></div>
+        </div>
+      </div>
+      <div class="detail-body" id="detailBody"></div>
+      <button class="detail-close-btn" onclick="closeDetail()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  얍할라 인포그래픽 — 읽기 전용 피드
+// ════════════════════════════════════════════
+
+let allPosts = [];
+let currentSlide = {};   // postId → 현재 슬라이드 인덱스
+
+// ── 인증 ──────────────────────────────────
+firebase.auth().onAuthStateChanged(function(user){
+  if(!user){ location.href='login.html'; return; }
+  firebase.firestore().collection('users').doc(user.uid).get().then(doc=>{
+    if(!doc.exists){ location.href='login.html'; return; }
+    const d=doc.data();
+    if(!d.approved){ location.href='pending.html'; return; }
+
+    document.getElementById('userName').textContent = d.nickname||user.displayName||'?';
+    const roleEl=document.getElementById('myRoleBadge');
+    if(roleEl){
+      const r=d.role||'member';
+      roleEl.textContent = r==='admin'?'관리자':r==='staff'?'운영진':'길드원';
+      roleEl.className   = r==='admin'?'role-badge role-admin':r==='staff'?'role-badge role-staff':'role-badge role-member';
+      if(r==='admin'||r==='staff'){
+        const m=document.getElementById('navAdminMenu');
+        if(m) m.style.display='';
+      }
+    }
+    document.getElementById('profileChangeBtn').style.display='';
+
+    startFeed();
+    if(typeof hideLoading==='function') hideLoading();
+  }).catch(()=>{ location.href='login.html'; });
+});
+
+// ── Firestore 실시간 피드 ─────────────────
+function startFeed(){
+  firebase.firestore()
+    .collection('infographic_posts')
+    .where('visible','==',true)
+    .orderBy('createdAt','desc')
+    .limit(60)
+    .onSnapshot(snap=>{
+      document.getElementById('skeletonArea').style.display='none';
+
+      allPosts=[];
+      snap.forEach(doc=>allPosts.push({id:doc.id,...doc.data()}));
+
+      const feed  = document.getElementById('feedList');
+      const empty = document.getElementById('emptyState');
+
+      if(allPosts.length===0){
+        feed.style.display='none';
+        empty.style.display='block';
+        return;
+      }
+      empty.style.display='none';
+      feed.innerHTML = allPosts.map(buildCard).join('');
+      feed.style.display='';   // grid 복원
+    }, err=>{
+      console.error('Feed error:',err);
+      document.getElementById('skeletonArea').style.display='none';
+    });
+}
+
+// ── 블로그 카드 ───────────────────────────
+function buildCard(p){
+  /* 썸네일 — 첫 번째 이미지 */
+  const imgs = p.imageUrls||[];
+  const thumbHtml = imgs.length > 0
+    ? `<img src="${escH(imgs[0])}" alt="thumbnail" loading="lazy"
+            onerror="this.parentElement.innerHTML=placeholderHtml()">
+       ${imgs.length>1?`<div class="img-count-badge">🖼 ${imgs.length}</div>`:''}`
+    : placeholderHtml();
+
+  /* 날짜 */
+  const dateStr = fmtDate(p.createdAt);
+
+  /* 본문 미리보기 — 마크다운 제거 */
+  const excerpt = (p.content||'')
+    .replace(/\*\*/g,'').replace(/\*/g,'').replace(/<[^>]+>/g,'').slice(0,120);
+
+  /* 아바타 */
+  const avHtml = p.authorAvatar
+    ? `<img src="${escH(p.authorAvatar)}" alt="" onerror="this.style.display='none'">`
+    : `<span>${escH((p.authorName||'?')[0].toUpperCase())}</span>`;
+
+  return `
+  <div class="blog-card" onclick="openDetail('${escH(p.id)}')">
+    <div class="card-thumb">${thumbHtml}</div>
+    <div class="card-body">
+      <div class="card-meta">
+        <div class="meta-avatar">${avHtml}</div>
+        <div class="meta-info">
+          <div class="meta-author">${escH(p.authorName||'?')}</div>
+          <div class="meta-date">${dateStr}</div>
+        </div>
+        ${p.channelName?`<span class="channel-badge">#${escH(p.channelName)}</span>`:''}
+      </div>
+      ${excerpt?`<div class="card-excerpt">${escH(excerpt)}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function placeholderHtml(){
+  return`<div class="card-thumb-placeholder">
+    <div class="ph-icon">🎮</div>
+    <div class="ph-txt">이미지 없음</div>
+  </div>`;
+}
+
+// ── 상세 모달 ─────────────────────────────
+function openDetail(id){
+  const p=allPosts.find(x=>x.id===id);
+  if(!p)return;
+
+  const imgs=p.imageUrls||[];
+  currentSlide[id]=0;
+
+  /* 갤러리 */
+  const gallery=document.getElementById('detailGallery');
+  if(imgs.length===0){
+    gallery.innerHTML='';
+    gallery.style.display='none';
+  } else {
+    gallery.style.display='block';
+    const slides=imgs.map((u,i)=>`
+      <div class="gallery-slide ${i===0?'active':''}" data-idx="${i}">
+        <img src="${escH(u)}" alt="image ${i+1}" loading="lazy">
+      </div>`).join('');
+
+    const dots=imgs.length>1?`
+      <div class="gallery-dots">
+        ${imgs.map((_,i)=>`<div class="gallery-dot ${i===0?'active':''}" onclick="goSlide('${escH(id)}',${i})"></div>`).join('')}
+      </div>
+      <div class="gallery-counter" id="galCount_${escH(id)}">1 / ${imgs.length}</div>`:'';
+
+    const arrows=imgs.length>1?`
+      <button class="gallery-nav gallery-prev" onclick="goSlide('${escH(id)}',${0},true)" data-dir="-1">‹</button>
+      <button class="gallery-nav gallery-next" onclick="goSlide('${escH(id)}',${0},false)" data-dir="1">›</button>`:'';
+
+    gallery.innerHTML=slides+dots+arrows;
+
+    /* 화살표에 실제 방향 연결 */
+    const prev=gallery.querySelector('.gallery-prev');
+    const next=gallery.querySelector('.gallery-next');
+    if(prev) prev.onclick=e=>{e.stopPropagation();slideDir(id,-1);};
+    if(next) next.onclick=e=>{e.stopPropagation();slideDir(id,1);};
+  }
+
+  /* 작성자 */
+  const avEl=document.getElementById('detailAvatar');
+  avEl.innerHTML=p.authorAvatar
+    ?`<img src="${escH(p.authorAvatar)}" alt="" onerror="this.style.display='none'">`
+    :`<span>${escH((p.authorName||'?')[0].toUpperCase())}</span>`;
+  document.getElementById('detailAuthor').textContent=p.authorName||'?';
+  document.getElementById('detailDate').textContent=fmtDate(p.createdAt,true);
+
+  /* 본문 */
+  document.getElementById('detailBody').innerHTML=formatContent(p.content||'');
+
+  /* 모달 열기 */
+  const overlay=document.getElementById('detailOverlay');
+  overlay.classList.add('active');
+  overlay.scrollTop=0;
+  document.body.style.overflow='hidden';
+}
+
+function closeDetail(){
+  document.getElementById('detailOverlay').classList.remove('active');
+  document.body.style.overflow='';
+}
+
+function handleOverlayClick(e){
+  if(e.target===document.getElementById('detailOverlay')) closeDetail();
+}
+
+/* 갤러리 슬라이드 */
+function goSlide(id,idx){
+  const gallery=document.getElementById('detailGallery');
+  if(!gallery)return;
+  const slides=[...gallery.querySelectorAll('.gallery-slide')];
+  const dots  =[...gallery.querySelectorAll('.gallery-dot')];
+  if(!slides.length)return;
+  const n=slides.length;
+  currentSlide[id]=(idx+n)%n;
+  slides.forEach((s,i)=>s.classList.toggle('active',i===currentSlide[id]));
+  dots.forEach((d,i)=>d.classList.toggle('active',i===currentSlide[id]));
+  const cnt=document.getElementById(`galCount_${id}`);
+  if(cnt) cnt.textContent=`${currentSlide[id]+1} / ${n}`;
+}
+function slideDir(id,dir){
+  goSlide(id,(currentSlide[id]||0)+dir);
+}
+
+// ── 텍스트 포맷 ───────────────────────────
+function formatContent(t){
+  if(!t)return'';
+  let s=escH(t);
+  s=s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  s=s.replace(/(https?:\/\/[^\s<>"'\)\]]+)/g,
+    '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  s=s.replace(/\n/g,'<br>');
+  return`<p>${s}</p>`;
+}
+
+// ── 날짜 포맷 ─────────────────────────────
+function fmtDate(ts,full=false){
+  try{
+    const d=ts?.toDate?ts.toDate():new Date((ts?.seconds||0)*1000);
+    const now=new Date(),diff=Math.floor((now-d)/1000);
+    if(!full){
+      if(diff<60)        return'방금 전';
+      if(diff<3600)      return Math.floor(diff/60)+'분 전';
+      if(diff<86400)     return Math.floor(diff/3600)+'시간 전';
+    }
+    const mo=String(d.getMonth()+1).padStart(2,'0'),dy=String(d.getDate()).padStart(2,'0');
+    const hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');
+    return`${d.getFullYear()}.${mo}.${dy} ${hh}:${mm}`;
+  }catch(e){return'';}
+}
+
+// ── HTML 이스케이프 ───────────────────────
+function escH(s){
+  if(s==null)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── 키보드 ───────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeDetail();
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+    const overlay=document.getElementById('detailOverlay');
+    if(!overlay.classList.contains('active'))return;
+    // 현재 열린 포스트 찾기
+    const id=Object.keys(currentSlide).pop();
+    if(id) slideDir(id,e.key==='ArrowLeft'?-1:1);
+  }
+});
+
+// ── 공통 ─────────────────────────────────
+function logout(){firebase.auth().signOut().then(()=>{location.href='login.html';});}
+function toggleNav(){document.getElementById('sidebar')?.classList.toggle('open');}
+function toggleLangPage(){
+  const c=localStorage.getItem('roider_lang')||'ko';
+  localStorage.setItem('roider_lang',c==='ko'?'en':'ko');
+  location.reload();
+}
+</script>
+</body>
+</html>

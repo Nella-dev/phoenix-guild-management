@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>ROIDER Firebase 배포 가이드</title>
+<style>
+body{background:#0f1015;color:#e6e6e6;font-family:'Segoe UI',sans-serif;max-width:860px;margin:0 auto;padding:40px 20px}
+h1{color:#f4c430;font-size:28px;border-bottom:2px solid #f4c430;padding-bottom:12px}
+h2{color:#4ade80;font-size:18px;margin-top:32px}
+code{background:#1c1f2a;color:#f4c430;padding:2px 8px;border-radius:4px;font-size:14px}
+pre{background:#1c1f2a;border:1px solid #2a3242;border-radius:8px;padding:16px;overflow-x:auto;line-height:1.6}
+.cmd{color:#4ade80}
+.step{background:#161921;border-left:3px solid #f4c430;padding:12px 16px;margin:12px 0;border-radius:0 8px 8px 0}
+.note{background:#1a3040;border:1px solid #3b8fc4;border-radius:8px;padding:12px;margin:12px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th{background:#1c1f2a;color:#f4c430;padding:8px 12px;text-align:left}
+td{padding:8px 12px;border-bottom:1px solid #2a3242}
+</style>
+</head>
+<body>
+<h1>🚀 ROIDER Firebase 배포 가이드</h1>
+<p>이 가이드를 따라 모든 길드원이 실시간으로 편성을 공유할 수 있도록 배포하세요.</p>
+
+<h2>📋 변경된 파일 목록</h2>
+<table>
+<tr><th>파일</th><th>변경 내용</th></tr>
+<tr><td><code>firebase-config.js</code> (신규)</td><td>Firebase compat SDK 초기화 통합 파일</td></tr>
+<tr><td><code>editor_test.html</code></td><td>Firebase SDK 추가 + submitShare() → Firestore 저장</td></tr>
+<tr><td><code>editor.html</code></td><td>firebase-config.js → firebase_key.js + firebase_config.js 수정</td></tr>
+<tr><td><code>formation_board.html</code></td><td>onSnapshot 실시간 리스너 + tiles 미니 헥스그리드 + 좋아요 토글</td></tr>
+</table>
+
+<h2>⚡ 배포 방법 (Firebase Hosting)</h2>
+
+<div class="step">
+<strong>Step 1. Node.js 및 Firebase CLI 설치</strong>
+<pre><span class="cmd">npm install -g firebase-tools</span></pre>
+</div>
+
+<div class="step">
+<strong>Step 2. Firebase 로그인</strong>
+<pre><span class="cmd">firebase login</span></pre>
+<p>→ 브라우저에서 Google 계정 인증</p>
+</div>
+
+<div class="step">
+<strong>Step 3. 프로젝트 디렉토리에서 배포</strong>
+<pre><span class="cmd">cd /path/to/roider-project
+firebase deploy --only hosting</span></pre>
+</div>
+
+<div class="step">
+<strong>Step 4. 배포 완료 URL</strong>
+<pre>https://roider-guild-management.web.app</pre>
+</div>
+
+<h2>🔥 Firestore 실시간 공유 흐름</h2>
+<pre>
+에디터 (editor_test.html / editor.html)
+  └── 📤 "편성 공유 게시판에 공유" 버튼
+      └── Firestore: shared_formations 컬렉션에 addDoc()
+          └── 게시판 (formation_board.html)
+              └── onSnapshot() 실시간 수신
+                  └── 모든 멤버 화면에 즉시 반영 ⚡
+</pre>
+
+<h2>📐 Firestore 문서 구조</h2>
+<pre>
+shared_formations/{docId} {
+  title:         "진형 제목",
+  description:   "전략 설명",
+  arena:         "Arena I",
+  formationMode: 1~5,         // 진형 수
+  tiles:         [45개 숫자], // 헥스 그리드 타일
+  teams:         { ... },     // 팀 데이터 (옵션)
+  authorId:      "Firebase UID",
+  authorName:    "닉네임",
+  createdAt:     Timestamp,
+  likes:         0
+}
+</pre>
+
+<h2>🔒 Firestore Security Rules (현재 설정)</h2>
+<pre>
+match /shared_formations/{docId} {
+  allow read:          if request.auth != null;  // 로그인 멤버만 읽기
+  allow create:        if request.auth != null;  // 로그인 멤버만 작성
+  allow update,delete: if request.auth != null
+    && request.auth.uid == resource.data.authorId; // 본인만 수정/삭제
+}
+</pre>
+
+<div class="note">
+💡 <strong>참고:</strong> Firestore rules는 로그인한 멤버만 읽기/쓰기 가능합니다.
+비로그인 상태에서는 편성이 보이지 않으며, 이것은 의도된 보안 설정입니다.
+</div>
+
+<h2>📱 기능 요약</h2>
+<table>
+<tr><th>기능</th><th>설명</th></tr>
+<tr><td>실시간 공유</td><td>공유 즉시 모든 멤버 화면에 반영 (onSnapshot)</td></tr>
+<tr><td>헥스 그리드 미리보기</td><td>카드에 45칸 헥스 타일 컬러 미니맵 표시</td></tr>
+<tr><td>좋아요 토글</td><td>다시 클릭하면 취소, 중복 방지 (localStorage 추적)</td></tr>
+<tr><td>본인 삭제</td><td>자신이 공유한 편성만 삭제 가능</td></tr>
+<tr><td>닉네임 자동 입력</td><td>Firebase Auth 로그인 시 닉네임 자동 적용</td></tr>
+</table>
+</body>
+</html>

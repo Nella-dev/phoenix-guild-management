@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ROIDER - 프로필 선택</title>
+
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://static.wikia.nocookie.net">
+  <link rel="stylesheet" href="header_standard.css">
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f1015;
+      --card-bg: #1c1f2a;
+      --border: #2a3242;
+      --gold: #f4c430;
+      --text: #eee;
+      --muted: #888;
+      --selected: #f4c430;
+      --hover-overlay: rgba(244,196,48,0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1b2333, #0f1015 60%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      height: 56px;
+      background: rgba(15,16,21,0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: 2px; }
+    .user-box { display: flex; align-items: center; gap: 10px; }
+    .user-box img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #444; }
+    .user-box span { font-size: 14px; color: #ccc; }
+    button.logout {
+      background: transparent; border: 1px solid #555; color: #ccc;
+      padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    }
+
+    /* ── 메인 ── */
+    .page-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+    }
+
+    /* ── 게임 스타일 패널 ── */
+    .profile-panel {
+      background: linear-gradient(160deg, #2a2e3d 0%, #1c1f2a 60%, #16192a 100%);
+      border: 1px solid #3a4055;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+    }
+
+    /* 탭 헤더 */
+    .panel-tabs {
+      display: flex;
+      border-bottom: 1px solid #3a4055;
+      background: rgba(0,0,0,0.2);
+    }
+    .panel-tab {
+      flex: 1;
+      padding: 14px 8px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .panel-tab.active {
+      color: var(--text);
+    }
+    .panel-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--gold);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* 미리보기 영역 */
+    .preview-area {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 0 16px;
+      background: linear-gradient(180deg, rgba(244,196,48,0.03) 0%, transparent 100%);
+    }
+    .preview-ring {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid var(--gold);
+      box-shadow: 0 0 20px rgba(244,196,48,0.3), 0 0 40px rgba(244,196,48,0.1);
+      overflow: hidden;
+      animation: previewPulse 3s ease-in-out infinite;
+    }
+    @keyframes previewPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(244,196,48,0.3), 0 0 40px rgba(244,196,48,0.1); }
+      50%       { box-shadow: 0 0 30px rgba(244,196,48,0.5), 0 0 60px rgba(244,196,48,0.2); }
+    }
+    .preview-ring img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    /* 그리드 컨테이너 */
+    .grid-container {
+      padding: 12px 16px 16px;
+    }
+    .grid-scroll {
+      max-height: 380px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #3a4055 transparent;
+    }
+    .grid-scroll::-webkit-scrollbar { width: 4px; }
+    .grid-scroll::-webkit-scrollbar-track { background: transparent; }
+    .grid-scroll::-webkit-scrollbar-thumb { background: #3a4055; border-radius: 2px; }
+
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 8px;
+      padding: 4px 2px;
+    }
+
+    /* 아이콘 셀 */
+    .icon-cell {
+      position: relative;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.15s;
+    }
+    .icon-cell:hover { transform: scale(1.08); }
+    .icon-cell:active { transform: scale(0.95); }
+
+    .icon-cell .icon-img {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2.5px solid #3a4055;
+      display: block;
+      background: #1c1f2a;
+      transition: border-color 0.15s;
+    }
+    .icon-cell:hover .icon-img { border-color: rgba(244,196,48,0.5); }
+    .icon-cell.selected .icon-img {
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(244,196,48,0.5);
+    }
+
+    /* 선택 체크 뱃지 */
+    .icon-cell.selected::after {
+      content: '✓';
+      position: absolute;
+      bottom: 2px; right: 2px;
+      width: 18px; height: 18px;
+      background: var(--gold);
+      color: #111;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 18px;
+      text-align: center;
+    }
+
+    /* 삭제 뱃지 (업로드 이미지 삭제) */
+    .icon-cell .del-btn {
+      display: none;
+      position: absolute;
+      top: 0; right: 0;
+      width: 20px; height: 20px;
+      background: #ff4444;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 10;
+    }
+    .icon-cell:hover .del-btn { display: block; }
+
+    /* 파일 업로드 버튼 셀 */
+    .upload-cell {
+      cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.15s;
+    }
+    .upload-cell:hover { transform: scale(1.08); }
+    .upload-cell .upload-btn {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2.5px dashed #555;
+      background: rgba(255,255,255,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-cell:hover .upload-btn {
+      border-color: var(--gold);
+      background: var(--hover-overlay);
+    }
+    .upload-icon { font-size: 22px; }
+    .upload-label { font-size: 8px; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; }
+
+    /* 업로드 미리보기 셀 */
+    .uploaded-cell {
+      cursor: pointer;
+      border-radius: 50%;
+    }
+    .uploaded-cell .icon-img {
+      border-color: #00b0ff;
+    }
+    .uploaded-cell.selected .icon-img {
+      border-color: var(--gold);
+    }
+
+    /* 로딩 스피너 */
+    .grid-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 13px;
+      gap: 10px;
+    }
+    .spin {
+      width: 18px; height: 18px;
+      border: 2px solid #333;
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 캐릭터 이름 툴팁 */
+    .icon-cell[data-name]:hover::before,
+    .upload-cell[data-name]:hover::before {
+      content: attr(data-name);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* 저장 버튼 */
+    .save-section {
+      padding: 0 16px 20px;
+    }
+    .btn-save {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      background: var(--gold);
+      color: #111;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.2s, opacity 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .btn-save:hover { background: #e5b82d; }
+    .btn-save:active { transform: scale(0.98); }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 뒤로가기 */
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 12px 16px 8px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--text); }
+    .back-arrow {
+      width: 32px; height: 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    /* 섹션 구분선 */
+    .grid-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 4px 4px;
+    }
+
+    /* 업로드 진행 오버레이 */
+    .upload-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,16,21,0.85);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .upload-overlay.show { display: flex; }
+    .upload-overlay .spin { width: 36px; height: 36px; border-width: 3px; }
+    .upload-overlay span { color: var(--gold); font-size: 14px; font-weight: 600; }
+
+    /* 반응형 */
+    @media (max-width: 400px) {
+      .icon-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">ROIDER GUILD</div>
+    <div class="user-box">
+      <img id="headerPhoto" src="" alt="profile" />
+      <span id="headerName">Loading...</span>
+      <button class="logout" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <div class="profile-panel">
+
+      <!-- 탭 -->
+      <div class="panel-tabs">
+        <div class="panel-tab active" onclick="switchTab('profile')">프로필</div>
+      </div>
+
+      <!-- 미리보기 -->
+      <div class="preview-area">
+        <div class="preview-ring">
+          <img id="previewImg" src="" alt="preview" />
+        </div>
+      </div>
+
+      <!-- 그리드 -->
+      <div class="grid-container">
+        <div class="grid-section-label">사용할 프로필을 선택하세요</div>
+        <div class="grid-scroll">
+          <div class="icon-grid" id="iconGrid">
+            <!-- 업로드 버튼 (첫 번째) -->
+            <div class="upload-cell" data-name="사진 가져오기" onclick="triggerFileInput()">
+              <div class="upload-btn">
+                <span class="upload-icon">📷</span>
+                <span class="upload-label">파일 선택</span>
+              </div>
+            </div>
+            <!-- 업로드 결과 표시 (두 번째, 기본 숨김) -->
+            <div class="icon-cell uploaded-cell" id="uploadedCell" style="display:none;" data-name="내 업로드">
+              <img class="icon-img" id="uploadedImg" src="" alt="uploaded" onclick="selectIcon(this, '__uploaded__')"/>
+              <span class="del-btn" onclick="clearUpload(event)">✕</span>
+            </div>
+            <!-- 로딩 -->
+            <div class="grid-loading" id="gridLoading" style="grid-column: 1 / -1;">
+              <div class="spin"></div>
+              <span>캐릭터 로딩 중...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 뒤로 + 저장 -->
+      <div class="save-section">
+        <div class="back-btn" onclick="goBack()">
+          <div class="back-arrow">←</div>
+          <span>뒤로가기</span>
+        </div>
+        <button class="btn-save" id="saveBtn" onclick="saveProfile()" disabled>사용 중</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 업로드 진행 오버레이 -->
+  <div class="upload-overlay" id="uploadOverlay">
+    <div class="spin"></div>
+    <span id="uploadStatus">이미지 업로드 중...</span>
+  </div>
+
+  <!-- 파일 input (숨김) -->
+  <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg,image/webp"
+         style="display:none" onchange="handleFileSelect(event)" />
+
+  <!-- 로딩 오버레이 -->
+  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
+    <div style="width:36px;height:36px;border:3px solid #333;border-top-color:#f4c430;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+    <span style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">ROIDER GUILD</span>
+  </div>
+
+  <script>
+  // ════════════════════════════════════════════════════
+  // AFK Journey 캐릭터 데이터
+  // Source: afk-journey.fandom.com (CC-BY-SA)
+  // ════════════════════════════════════════════════════
+  const AFK_HEROES = [
+    {name:"Aliceth",  url:"https://static.wikia.nocookie.net/afk-journey/images/2/28/Hero_Aliceth.png/revision/latest"},
+    {name:"Alna",     url:"https://static.wikia.nocookie.net/afk-journey/images/e/e5/Hero_Alna.png/revision/latest"},
+    {name:"Alsa",     url:"https://static.wikia.nocookie.net/afk-journey/images/9/9e/Hero_Alsa.png/revision/latest"},
+    {name:"Antandra", url:"https://static.wikia.nocookie.net/afk-journey/images/1/13/Hero_Antandra.png/revision/latest"},
+    {name:"Arden",    url:"https://static.wikia.nocookie.net/afk-journey/images/2/29/Hero_Arden.png/revision/latest"},
+    {name:"Atalanta", url:"https://static.wikia.nocookie.net/afk-journey/images/5/55/Hero_Atalanta.png/revision/latest"},
+    {name:"Athalia",  url:"https://static.wikia.nocookie.net/afk-journey/images/3/3c/Hero_Athalia.png/revision/latest"},
+    {name:"Aurora",   url:"https://static.wikia.nocookie.net/afk-journey/images/5/5a/Hero_Aurora.png/revision/latest"},
+    {name:"Baelran",  url:"https://static.wikia.nocookie.net/afk-journey/images/9/9e/Hero_Baelran.png/revision/latest"},
+    {name:"Berial",   url:"https://static.wikia.nocookie.net/afk-journey/images/0/0f/Hero_Berial.png/revision/latest"},
+    {name:"Bonnie",   url:"https://static.wikia.nocookie.net/afk-journey/images/8/8d/Hero_Bonnie.png/revision/latest"},
+    {name:"Brutus",   url:"https://static.wikia.nocookie.net/afk-journey/images/9/91/Hero_Brutus.png/revision/latest"},
+    {name:"Bryon",    url:"https://static.wikia.nocookie.net/afk-journey/images/9/9b/Hero_Bryon.png/revision/latest"},
+    {name:"Callan",   url:"https://static.wikia.nocookie.net/afk-journey/images/3/35/Hero_Callan.png/revision/latest"},
+    {name:"Carolina", url:"https://static.wikia.nocookie.net/afk-journey/images/1/10/Hero_Carolina.png/revision/latest"},
+    {name:"Cassadee", url:"https://static.wikia.nocookie.net/afk-journey/images/a/a6/Hero_Cassadee.png/revision/latest"},
+    {name:"Cecia",    url:"https://static.wikia.nocookie.net/afk-journey/images/3/3b/Hero_Cecia.png/revision/latest"},
+    {name:"Chippy",   url:"https://static.wikia.nocookie.net/afk-journey/images/f/ff/Hero_Chippy.png/revision/latest"},
+    {name:"Contess",  url:"https://static.wikia.nocookie.net/afk-journey/images/d/db/Hero_Contess.png/revision/latest"},
+    {name:"Cryonaia", url:"https://static.wikia.nocookie.net/afk-journey/images/5/57/Hero_Cryonaia.png/revision/latest"},
+    {name:"Cyran",    url:"https://static.wikia.nocookie.net/afk-journey/images/7/73/Cyran.png/revision/latest"},
+    {name:"Daimon",   url:"https://static.wikia.nocookie.net/afk-journey/images/7/73/Hero_Daimon.png/revision/latest"},
+    {name:"Damian",   url:"https://static.wikia.nocookie.net/afk-journey/images/a/ab/Hero_Damian.png/revision/latest"},
+    {name:"Dionel",   url:"https://static.wikia.nocookie.net/afk-journey/images/6/67/Hero_Dionel.png/revision/latest"},
+    {name:"Dunlingr", url:"https://static.wikia.nocookie.net/afk-journey/images/4/4d/Hero_Dunlingr.png/revision/latest"},
+    {name:"Eironn",   url:"https://static.wikia.nocookie.net/afk-journey/images/a/aa/Hero_Eironn.png/revision/latest"},
+    {name:"Evie",     url:"https://static.wikia.nocookie.net/afk-journey/images/5/53/Hero_Evie.png/revision/latest"},
+    {name:"Faramor",  url:"https://static.wikia.nocookie.net/afk-journey/images/6/6d/Hero_Faramor.png/revision/latest"},
+    {name:"Fay",      url:"https://static.wikia.nocookie.net/afk-journey/images/c/c8/Hero_Fay.png/revision/latest"},
+    {name:"Florabelle",url:"https://static.wikia.nocookie.net/afk-journey/images/1/13/Hero_Florabelle.png/revision/latest"},
+    {name:"Galahad",  url:"https://static.wikia.nocookie.net/afk-journey/images/9/98/Hero_Galahad.png/revision/latest"},
+    {name:"Gerda",    url:"https://static.wikia.nocookie.net/afk-journey/images/2/29/Hero_Gerda.png/revision/latest"},
+    {name:"Granny Dahnie", url:"https://static.wikia.nocookie.net/afk-journey/images/1/18/Hero_Granny_Dahnie.png/revision/latest"},
+    {name:"Hammie",   url:"https://static.wikia.nocookie.net/afk-journey/images/e/eb/Hero_Hammie.png/revision/latest"},
+    {name:"Harak",    url:"https://static.wikia.nocookie.net/afk-journey/images/8/81/Hero_Harak.png/revision/latest"},
+    {name:"Hewynn",   url:"https://static.wikia.nocookie.net/afk-journey/images/0/0d/Hero_Hewynn.png/revision/latest"},
+    {name:"Hodgkin",  url:"https://static.wikia.nocookie.net/afk-journey/images/4/4a/Hero_Hodgkin.png/revision/latest"},
+    {name:"Hogan",    url:"https://static.wikia.nocookie.net/afk-journey/images/7/7a/Hero_Hogan.png/revision/latest"},
+    {name:"Hugin",    url:"https://static.wikia.nocookie.net/afk-journey/images/8/8e/Hero_Hugin.png/revision/latest"},
+    {name:"Igor",     url:"https://static.wikia.nocookie.net/afk-journey/images/a/a2/Hero_Igor.png/revision/latest"},
+    {name:"Indris",   url:"https://static.wikia.nocookie.net/afk-journey/images/5/59/Hero_Indris.png/revision/latest"},
+    {name:"Kafra",    url:"https://static.wikia.nocookie.net/afk-journey/images/8/83/Hero_Kafra.png/revision/latest"},
+    {name:"Koko",     url:"https://static.wikia.nocookie.net/afk-journey/images/f/f9/Hero_Koko.png/revision/latest"},
+    {name:"Kordan",   url:"https://static.wikia.nocookie.net/afk-journey/images/c/c8/Hero_Kordan.png/revision/latest"},
+    {name:"Korin",    url:"https://static.wikia.nocookie.net/afk-journey/images/f/f4/Hero_Korin.png/revision/latest"},
+    {name:"Kruger",   url:"https://static.wikia.nocookie.net/afk-journey/images/7/71/Hero_Kruger.png/revision/latest"},
+    {name:"Kulu",     url:"https://static.wikia.nocookie.net/afk-journey/images/5/5c/Hero_Kulu.png/revision/latest"},
+    {name:"Laios",    url:"https://static.wikia.nocookie.net/afk-journey/images/2/24/Hero_Laios.png/revision/latest"},
+    {name:"Lenya",    url:"https://static.wikia.nocookie.net/afk-journey/images/6/68/Hero_Lenya.png/revision/latest"},
+    {name:"Lily May", url:"https://static.wikia.nocookie.net/afk-journey/images/b/be/Hero_Lily_May.png/revision/latest"},
+    {name:"Lorsan",   url:"https://static.wikia.nocookie.net/afk-journey/images/2/2d/Hero_Lorsan.png/revision/latest"},
+    {name:"Lucca",    url:"https://static.wikia.nocookie.net/afk-journey/images/3/3e/Hero_Lucca.png/revision/latest"},
+    {name:"Lucius",   url:"https://static.wikia.nocookie.net/afk-journey/images/9/9a/Hero_Lucius.png/revision/latest"},
+    {name:"Lucy",     url:"https://static.wikia.nocookie.net/afk-journey/images/8/81/Hero_Lucy.png/revision/latest"},
+    {name:"Ludovic",  url:"https://static.wikia.nocookie.net/afk-journey/images/a/a9/Hero_Ludovic.png/revision/latest"},
+    {name:"Lumont",   url:"https://static.wikia.nocookie.net/afk-journey/images/3/3a/Hero_Lumont.png/revision/latest"},
+    {name:"Lyca",     url:"https://static.wikia.nocookie.net/afk-journey/images/4/4e/Hero_Lyca.png/revision/latest"},
+    {name:"Marcille", url:"https://static.wikia.nocookie.net/afk-journey/images/3/3f/Hero_Marcille.png/revision/latest"},
+    {name:"Marilee",  url:"https://static.wikia.nocookie.net/afk-journey/images/c/cb/Hero_Marilee.png/revision/latest"},
+    {name:"Mehira",   url:"https://static.wikia.nocookie.net/afk-journey/images/a/a6/Hero_Mehira.png/revision/latest"},
+    {name:"Merlin",   url:"https://static.wikia.nocookie.net/afk-journey/images/1/17/Hero_Mikola.png/revision/latest"},
+    {name:"Mirael",   url:"https://static.wikia.nocookie.net/afk-journey/images/1/16/Hero_Mirael.png/revision/latest"},
+    {name:"Nara",     url:"https://static.wikia.nocookie.net/afk-journey/images/5/57/Hero_Nara.png/revision/latest"},
+    {name:"Natsu",    url:"https://static.wikia.nocookie.net/afk-journey/images/e/ef/Hero_Natsu.png/revision/latest"},
+    {name:"Nazrik",   url:"https://static.wikia.nocookie.net/afk-journey/images/e/ee/Hero_Nazrik.png/revision/latest"},
+    {name:"Niru",     url:"https://static.wikia.nocookie.net/afk-journey/images/a/ad/Hero_Niru.png/revision/latest"},
+    {name:"Odie",     url:"https://static.wikia.nocookie.net/afk-journey/images/c/c0/Hero_Odie.png/revision/latest"},
+    {name:"Pandora",  url:"https://static.wikia.nocookie.net/afk-journey/images/9/9b/Hero_Pandora.png/revision/latest"},
+    {name:"Pang",     url:"https://static.wikia.nocookie.net/afk-journey/images/a/a3/Hero_Pang.png/revision/latest"},
+    {name:"Parisa",   url:"https://static.wikia.nocookie.net/afk-journey/images/d/d2/Hero_Parisa.png/revision/latest"},
+    {name:"Perseus",  url:"https://static.wikia.nocookie.net/afk-journey/images/e/eb/Hero_Perseus.png/revision/latest"},
+    {name:"Phraesto", url:"https://static.wikia.nocookie.net/afk-journey/images/1/11/Hero_Phraesto.png/revision/latest"},
+    {name:"Pippa",    url:"https://static.wikia.nocookie.net/afk-journey/images/a/a0/Hero_Pippa.png/revision/latest"},
+    {name:"Ravion",   url:"https://static.wikia.nocookie.net/afk-journey/images/7/7b/Hero_Ravion.png/revision/latest"},
+    {name:"Reinier",  url:"https://static.wikia.nocookie.net/afk-journey/images/5/5e/Hero_Reinier.png/revision/latest"},
+    {name:"Rhys",     url:"https://static.wikia.nocookie.net/afk-journey/images/7/77/Hero_Rhys.png/revision/latest"},
+    {name:"Rowan",    url:"https://static.wikia.nocookie.net/afk-journey/images/7/7a/Hero_Rowan.png/revision/latest"},
+    {name:"Saida",    url:"https://static.wikia.nocookie.net/afk-journey/images/5/58/Hero_Saida.png/revision/latest"},
+    {name:"Salazer",  url:"https://static.wikia.nocookie.net/afk-journey/images/d/df/Hero_Salazer.png/revision/latest"},
+    {name:"Satrana",  url:"https://static.wikia.nocookie.net/afk-journey/images/0/0e/Hero_Satrana.png/revision/latest"},
+    {name:"Scarlita", url:"https://static.wikia.nocookie.net/afk-journey/images/e/e7/Hero_Scarlita.png/revision/latest"},
+    {name:"Seth",     url:"https://static.wikia.nocookie.net/afk-journey/images/1/11/Hero_Seth.png/revision/latest"},
+    {name:"Shakir",   url:"https://static.wikia.nocookie.net/afk-journey/images/f/fb/Hero_Shakir.png/revision/latest"},
+    {name:"Shemira",  url:"https://static.wikia.nocookie.net/afk-journey/images/d/d1/Hero_Shemira.png/revision/latest"},
+    {name:"Silven",   url:"https://static.wikia.nocookie.net/afk-journey/images/0/08/Hero_Silven.png/revision/latest"},
+    {name:"Silvina",  url:"https://static.wikia.nocookie.net/afk-journey/images/6/63/Hero_Silvina.png/revision/latest"},
+    {name:"Sinbad",   url:"https://static.wikia.nocookie.net/afk-journey/images/1/1f/Hero_Sinbad.png/revision/latest"},
+    {name:"Smokey & Meerky", url:"https://static.wikia.nocookie.net/afk-journey/images/2/21/Hero_Smokey_%26_Meerky.png/revision/latest"},
+    {name:"Solise",   url:"https://static.wikia.nocookie.net/afk-journey/images/3/30/Hero_Solise.png/revision/latest"},
+    {name:"Sonja",    url:"https://static.wikia.nocookie.net/afk-journey/images/2/2b/Hero_Sonja.png/revision/latest"},
+    {name:"Soren",    url:"https://static.wikia.nocookie.net/afk-journey/images/7/73/Hero_Soren.png/revision/latest"},
+    {name:"Talene",   url:"https://static.wikia.nocookie.net/afk-journey/images/6/69/Hero_Talene.png/revision/latest"},
+    {name:"Tasi",     url:"https://static.wikia.nocookie.net/afk-journey/images/a/a4/Hero_Tasi.png/revision/latest"},
+    {name:"Temesia",  url:"https://static.wikia.nocookie.net/afk-journey/images/e/e1/Hero_Temesia.png/revision/latest"},
+    {name:"Thador",   url:"https://static.wikia.nocookie.net/afk-journey/images/2/2b/Hero_Thador.png/revision/latest"},
+    {name:"Thoran",   url:"https://static.wikia.nocookie.net/afk-journey/images/8/8f/Hero_Thoran.png/revision/latest"},
+    {name:"Tilaya",   url:"https://static.wikia.nocookie.net/afk-journey/images/3/3b/Hero_Tilaya.png/revision/latest"},
+    {name:"Ulmus",    url:"https://static.wikia.nocookie.net/afk-journey/images/0/0a/Hero_Ulmus.png/revision/latest"},
+    {name:"Vala",     url:"https://static.wikia.nocookie.net/afk-journey/images/b/bb/Hero_Vala.png/revision/latest"},
+    {name:"Valen",    url:"https://static.wikia.nocookie.net/afk-journey/images/7/75/Hero_Valen.png/revision/latest"},
+    {name:"Valka",    url:"https://static.wikia.nocookie.net/afk-journey/images/5/5a/Hero_Valka.png/revision/latest"},
+    {name:"Velara",   url:"https://static.wikia.nocookie.net/afk-journey/images/2/2f/Hero_Velara.png/revision/latest"},
+    {name:"Viperian", url:"https://static.wikia.nocookie.net/afk-journey/images/c/c7/Hero_Viperian.png/revision/latest"},
+    {name:"Walker",   url:"https://static.wikia.nocookie.net/afk-journey/images/1/17/Hero_Walker.png/revision/latest"},
+    {name:"Zandrok",  url:"https://static.wikia.nocookie.net/afk-journey/images/3/30/Hero_Zandrok.png/revision/latest"},
+    {name:"Zanie",    url:"https://static.wikia.nocookie.net/afk-journey/images/7/7f/Hero_Zanie.png/revision/latest"},
+    {name:"Zorya",    url:"https://static.wikia.nocookie.net/afk-journey/images/c/c7/Hero_Zorya.png/revision/latest"},
+  ];
+
+  // ════════════════════════════════════════════════════
+  // 상태
+  // ════════════════════════════════════════════════════
+  let _uid          = null;
+  let _currentPhoto = null;   // 현재 저장된 프로필 URL
+  let _selectedUrl  = null;   // 선택 중인 URL
+  let _uploadedDataUrl = null; // 업로드된 이미지 dataURL (Firebase Storage 사용 시)
+  const FALLBACK    = 'https://ui-avatars.com/api/?name=U&background=2a3242&color=f4c430&bold=true';
+
+  // ════════════════════════════════════════════════════
+  // 초기화
+  // ════════════════════════════════════════════════════
+  auth.onAuthStateChanged(async (user) => {
+    const ol = document.getElementById('loadingOverlay');
+    if (!user) return location.replace('login.html');
+
+    _uid = user.uid;
+    document.getElementById('headerName').textContent = user.displayName || 'User';
+    document.getElementById('headerPhoto').src = user.photoURL || FALLBACK;
+
+    // Firestore에서 customPhotoURL 불러오기
+    try {
+      const snap = await db.collection('users').doc(_uid).get();
+      if (snap.exists) {
+        const data = snap.data();
+        _currentPhoto = data.customPhotoURL || data.photoURL || user.photoURL || FALLBACK;
+      } else {
+        _currentPhoto = user.photoURL || FALLBACK;
+      }
+    } catch (e) {
+      _currentPhoto = user.photoURL || FALLBACK;
+    }
+
+    // 미리보기 초기화
+    setPreview(_currentPhoto);
+
+    // 그리드 렌더링
+    renderGrid();
+
+    if (ol) ol.style.display = 'none';
+  });
+
+  // ════════════════════════════════════════════════════
+  // 미리보기 업데이트
+  // ════════════════════════════════════════════════════
+  function setPreview(url) {
+    const img = document.getElementById('previewImg');
+    img.src = url || FALLBACK;
+    img.onerror = () => { img.src = FALLBACK; };
+  }
+
+  // ════════════════════════════════════════════════════
+  // 그리드 렌더링
+  // ════════════════════════════════════════════════════
+  function renderGrid() {
+    const grid = document.getElementById('iconGrid');
+    // 로딩 제거
+    const loading = document.getElementById('gridLoading');
+    if (loading) loading.remove();
+
+    // 업로드된 이미지 복원
+    const savedUpload = localStorage.getItem('roider_uploaded_photo');
+    if (savedUpload) {
+      _uploadedDataUrl = savedUpload;
+      const cell  = document.getElementById('uploadedCell');
+      const uImg  = document.getElementById('uploadedImg');
+      uImg.src    = savedUpload;
+      cell.style.display = '';
+    }
+
+    // 캐릭터 아이콘 추가
+    AFK_HEROES.forEach(hero => {
+      const cell = document.createElement('div');
+      cell.className = 'icon-cell';
+      cell.dataset.name = hero.name;
+      cell.dataset.url  = hero.url;
+
+      const img = document.createElement('img');
+      img.className = 'icon-img';
+      img.alt = hero.name;
+      img.loading = 'lazy';
+      // 로딩 실패 시 fallback
+      img.onerror = () => { cell.style.display = 'none'; };
+      img.src = hero.url;
+      img.onclick = () => selectIcon(img, hero.url);
+
+      cell.appendChild(img);
+      grid.appendChild(cell);
+    });
+
+    // 현재 선택 표시
+    markSelected(_currentPhoto);
+  }
+
+  // ════════════════════════════════════════════════════
+  // 아이콘 선택
+  // ════════════════════════════════════════════════════
+  function selectIcon(imgEl, url) {
+    _selectedUrl = url;
+    setPreview(url === '__uploaded__' ? _uploadedDataUrl : url);
+
+    // 모든 selected 제거
+    document.querySelectorAll('.icon-cell.selected, .uploaded-cell.selected').forEach(c => c.classList.remove('selected'));
+
+    // 해당 셀 selected
+    const cell = imgEl.closest('.icon-cell') || imgEl.closest('.uploaded-cell');
+    if (cell) cell.classList.add('selected');
+
+    // 저장 버튼 활성화
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = false;
+    saveBtn.textContent = '저장하기';
+  }
+
+  function markSelected(url) {
+    if (!url) return;
+    document.querySelectorAll('.icon-cell[data-url]').forEach(cell => {
+      if (cell.dataset.url === url) cell.classList.add('selected');
+    });
+    // 업로드 셀 확인
+    if (_uploadedDataUrl && url === _uploadedDataUrl) {
+      document.getElementById('uploadedCell').classList.add('selected');
+    }
+  }
+
+  // ════════════════════════════════════════════════════
+  // 파일 업로드
+  // ════════════════════════════════════════════════════
+  function triggerFileInput() {
+    document.getElementById('fileInput').click();
+  }
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('이미지 파일(PNG, JPG)만 선택 가능합니다.', 'warning'); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('파일 크기는 5MB 이하만 가능합니다.', 'warning'); return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      _uploadedDataUrl = dataUrl;
+      localStorage.setItem('roider_uploaded_photo', dataUrl);
+
+      // 업로드 셀 표시
+      const cell = document.getElementById('uploadedCell');
+      const uImg = document.getElementById('uploadedImg');
+      uImg.src = dataUrl;
+      cell.style.display = '';
+      uImg.onclick = () => selectIcon(uImg, '__uploaded__');
+
+      // 자동 선택
+      selectIcon(uImg, '__uploaded__');
+    };
+    reader.readAsDataURL(file);
+    event.target.value = ''; // 같은 파일 재선택 허용
+  }
+
+  function clearUpload(e) {
+    e.stopPropagation();
+    _uploadedDataUrl = null;
+    localStorage.removeItem('roider_uploaded_photo');
+    const cell = document.getElementById('uploadedCell');
+    cell.classList.remove('selected');
+    cell.style.display = 'none';
+    // 업로드 이미지가 선택됐으면 선택 해제
+    if (_selectedUrl === '__uploaded__') {
+      _selectedUrl = null;
+      setPreview(_currentPhoto);
+      document.getElementById('saveBtn').disabled = true;
+      document.getElementById('saveBtn').textContent = '사용 중';
+    }
+  }
+
+  // ════════════════════════════════════════════════════
+  // 저장
+  // ════════════════════════════════════════════════════
+  async function saveProfile() {
+    if (!_selectedUrl) return;
+
+    const overlay = document.getElementById('uploadOverlay');
+    const status  = document.getElementById('uploadStatus');
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+
+    let finalUrl = _selectedUrl;
+
+    // 업로드 이미지인 경우 Firebase Storage에 저장
+    if (_selectedUrl === '__uploaded__' && _uploadedDataUrl) {
+      try {
+        overlay.classList.add('show');
+        status.textContent = '이미지 업로드 중...';
+
+        // storage 전역 변수 사용 (firebase_config.js에서 초기화됨)
+        if (!storage) {
+          throw new Error('Firebase Storage SDK가 로드되지 않았습니다.');
+        }
+        const storageRef = storage.ref(`profile_photos/${_uid}.jpg`);
+        // dataURL → Blob 변환
+        const response = await fetch(_uploadedDataUrl);
+        const blob = await response.blob();
+        const snapshot = await storageRef.put(blob);
+        finalUrl = await snapshot.ref.getDownloadURL();
+        // 업로드 성공 시 로컬 캐시 제거 (이미 영구저장)
+        localStorage.removeItem('roider_uploaded_photo');
+        status.textContent = '저장 중...';
+
+      } catch (err) {
+        overlay.classList.remove('show');
+        const msg = err.code === 'storage/unauthorized'
+          ? 'Storage 권한이 없습니다. Firebase Console에서 Storage를 활성화해주세요.'
+          : '업로드 중 오류: ' + err.message;
+        showToast(msg, 'error');
+        saveBtn.disabled = false;
+        return;
+      }
+    }
+
+    // Firestore에 customPhotoURL 저장
+    try {
+      overlay.classList.add('show');
+      status.textContent = '프로필 저장 중...';
+
+      await db.collection('users').doc(_uid).update({
+        customPhotoURL: finalUrl,
+        photoUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // 로컬 반영
+      _currentPhoto = finalUrl;
+      setPreview(finalUrl);
+      document.getElementById('headerPhoto').src = finalUrl;
+
+      // 모든 selected 유지
+      overlay.classList.remove('show');
+      showToast('프로필이 저장되었습니다! ✅', 'success', 2000);
+      saveBtn.textContent = '사용 중';
+      // saveBtn은 disabled 유지 (이미 적용됨)
+
+    } catch (err) {
+      overlay.classList.remove('show');
+      showToast('저장 실패: ' + err.message, 'error');
+      saveBtn.disabled = false;
+    }
+  }
+
+  // ════════════════════════════════════════════════════
+  // 뒤로가기
+  // ════════════════════════════════════════════════════
+  function goBack() {
+    if (history.length > 1) history.back();
+    else location.replace('main.html');
+  }
+
+  function switchTab(tab) { /* 향후 확장용 */ }
+  </script>
+
+</body>
+</html>

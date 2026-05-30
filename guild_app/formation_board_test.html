@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROIDER - 편성 공유 게시판</title>
+<style>
+:root{
+  --bg:#0f1015; --card:#1c1f2a; --card2:#161921;
+  --accent:#f4c430; --accent2:#e8a020;
+  --text:#e6e6e6; --text-dim:#888; --border:#2a3242;
+  --player:#27ae60; --enemy:#c0392b; --artifact:#f39c12;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);
+  font-family:'NEXON Lv1 Gothic OTF',-apple-system,sans-serif;min-height:100vh}
+.hd{display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;
+  background:linear-gradient(135deg,#1f2933,#121721);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.hd-logo{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;
+  color:var(--accent);text-decoration:none}
+.hd-nav{display:flex;gap:8px}
+.hd-nav a{color:var(--text-dim);text-decoration:none;font-size:13px;
+  padding:4px 10px;border-radius:4px}
+.hd-nav a:hover{background:rgba(244,196,48,.1);color:var(--accent)}
+.wrap{max-width:1200px;margin:0 auto;padding:24px 16px}
+.page-title{font-size:24px;font-weight:900;color:var(--accent);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text-dim);margin-bottom:20px}
+.stats-bar{display:flex;gap:24px;padding:12px 0;border-bottom:1px solid var(--border);
+  margin-bottom:20px}
+.stat-num{font-size:20px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:11px;color:var(--text-dim)}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.fi{padding:7px 12px;background:var(--card);border:1px solid var(--border);
+  color:var(--text);border-radius:6px;font-size:13px;font-family:inherit}
+.fi:focus{outline:none;border-color:var(--accent)}
+.fi-wide{width:220px}
+.btn-ed{padding:7px 16px;
+  background:linear-gradient(135deg,#1a6b3a,#0d4225);
+  border:1px solid #27ae60;color:#4ade80;border-radius:6px;cursor:pointer;
+  font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.btn-ed:hover{background:linear-gradient(135deg,#27ae60,#1a6b3a)}
+.posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.post-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:16px;cursor:pointer;transition:.2s}
+.post-card:hover{border-color:var(--accent);transform:translateY(-2px);
+  box-shadow:0 4px 20px rgba(244,196,48,.1)}
+.post-title{font-size:15px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:6px}
+.post-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.ba{background:rgba(244,196,48,.15);color:var(--accent);border:1px solid rgba(244,196,48,.3)}
+.bf{background:rgba(39,174,96,.15);color:#4ade80;border:1px solid rgba(39,174,96,.3)}
+.post-preview{height:80px;background:var(--card2);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;border:1px solid var(--border);overflow:hidden}
+.post-desc{font-size:12px;color:var(--text-dim);line-height:1.5;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  margin-bottom:10px}
+.post-foot{display:flex;justify-content:space-between;align-items:center}
+.post-author{font-size:12px;color:var(--text-dim)}
+.post-date{font-size:11px;color:#555}
+.like-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  padding:3px 8px;border-radius:12px;cursor:pointer;font-size:12px;
+  display:inline-flex;align-items:center;gap:3px;font-family:inherit}
+.like-btn:hover{border-color:#e74c3c;color:#e74c3c}
+.like-btn.liked{border-color:#e74c3c;color:#e74c3c;background:rgba(231,76,60,.1)}
+/* 미니 그리드 */
+.mg{display:flex;flex-direction:column;gap:1.5px}
+.mg-row{display:flex;gap:1.5px}
+.mh{width:8px;height:8px;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+.mh-p{background:#27ae60}.mh-e{background:#c0392b}
+.mh-o{background:#555}.mh-w{background:#4a4a6a}
+.mh-a{background:#f39c12}.mh-n{background:rgba(255,255,255,.06)}
+/* 큰 그리드 */
+.lg{display:flex;flex-direction:column;gap:3px}
+.lg-row{display:flex;gap:3px}
+.lh{width:22px;height:22px;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+/* 모달 */
+.modal-overlay{display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.8);z-index:200;
+  align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  width:640px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px}
+.m-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.m-title{font-size:20px;font-weight:700;color:var(--accent)}
+.btn-close{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  padding:4px 10px;border-radius:4px;cursor:pointer;font-size:14px;font-family:inherit}
+.m-arena{font-size:13px;color:var(--text-dim);margin-bottom:12px}
+.m-grid{background:var(--card2);border:1px solid var(--border);border-radius:8px;
+  padding:20px;display:flex;justify-content:center;margin-bottom:12px}
+.m-desc{font-size:13px;color:var(--text);line-height:1.6;
+  background:var(--card2);padding:12px;border-radius:6px;
+  border:1px solid var(--border);margin-bottom:12px}
+.m-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.btn-oped{padding:8px 20px;background:var(--accent);border:none;color:#000;
+  border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;
+  font-family:inherit;text-decoration:none;display:inline-block}
+.empty{text-align:center;padding:60px 20px;color:var(--text-dim);
+  grid-column:1/-1}
+.empty-icon{font-size:48px;margin-bottom:12px}
+</style>
+<script src="i18n_deck.js" defer></script>
+</head>
+<body>
+<header class="hd">
+  <a class="hd-logo" href="/">
+    <span style="font-size:22px">&#9876;&#65039;</span> ROIDER
+  </a>
+  <nav class="hd-nav">
+    <a href="index.html">&#127968; &#54492;</a>
+    <a href="editor_test.html">&#9997;&#65039; &#50640;&#45224;&#53552;</a>
+    <a href="members.html">&#128101; &#47908;&#48260;</a>
+    <a href="strategy.html">&#128506;&#65039; &#51204;&#47492;</a>
+  </nav>
+</header>
+<div class="wrap">
+  <div class="page-title">&#128203; &#54200;&#49457; &#44277;&#50976; &#44172;&#49884;&#54032;</div>
+  <div class="page-sub">&#44600;&#46300;&#50896;&#46é&#51032; &#50500;&#47112;&#45208; &#54200;&#49457;&#51012; &#44277;&#50976;&#54616;&#44256; &#52390;&#44256;&#54616;&#49464;&#50836;</div>
+  <div class="stats-bar">
+    <div><div class="stat-num" id="statTotal">0</div><div class="stat-label">&#51395; &#44277;&#50976; &#54200;&#49457;</div></div>
+    <div><div class="stat-num" id="statToday">0</div><div class="stat-label">&#50724;&#45720; &#44277;&#50976;</div></div>
+    <div><div class="stat-num" id="statLikes">0</div><div class="stat-label">&#51395; &#51316;&#50500;&#50836;</div></div>
+  </div>
+  <div class="filter-bar">
+    <input class="fi fi-wide" id="searchInput" placeholder="&#128269; &#51228;&#47785;, &#51089;&#49457;&#51088; &#44160;&#49353;..." oninput="renderPosts()">
+    <select class="fi" id="arenaFilter" onchange="renderPosts()">
+      <option value="">&#51204;&#52404; &#50500;&#47112;&#45208;</option>
+      <option>Thalassa</option><option>Arena I</option><option>Arena II</option>
+      <option>Arena III</option><option>Arena IV</option><option>Arena V</option>
+      <option>Arena V - Special</option><option>Supreme Arena I</option>
+      <option>Supreme Arena II</option><option>Supreme Arena III</option>
+      <option>Supreme Arena IV</option><option>Supreme Arena V</option>
+      <option>Supreme Arena VI</option><option>Supreme Arena VII</option>
+      <option>Supreme Arena VIII</option><option>Supreme Arena IX</option>
+      <option>Supreme Arena X</option><option>Supreme Arena XI</option>
+      <option>Supreme Arena XII</option><option>Supreme Arena XIII</option>
+      <option>Supreme Arena XIV</option><option>Ravaged Realm S4</option>
+    </select>
+    <select class="fi" id="fmFilter" onchange="renderPosts()">
+      <option value="">&#51652;&#54805; &#49688; &#51204;&#52404;</option>
+      <option value="1">1&#44060; &#51652;&#54805;</option>
+      <option value="2">2&#44060; &#51652;&#54805;</option>
+      <option value="3">3&#44060; &#51652;&#54805;</option>
+      <option value="4">4&#44060; &#51652;&#54805;</option>
+      <option value="5">5&#44060; &#51652;&#54805;</option>
+    </select>
+    <select class="fi" id="sortFilter" onchange="renderPosts()">
+      <option value="newest">&#51572;&#49888;&#49692;</option>
+      <option value="likes">&#51316;&#50500;&#50836;&#49692;</option>
+    </select>
+    <a href="editor_test.html" class="btn-ed">&#9997;&#65039; &#50640;&#45224;&#53552;&#50640;&#49436; &#54200;&#49457; &#47564;&#46é&#44592;</a>
+  </div>
+  <div class="posts-grid" id="postsGrid"></div>
+</div>
+<!-- 상세 모달 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="m-top">
+      <div class="m-title" id="mTitle"></div>
+      <button class="btn-close" onclick="closeDetail()">&#10005; &#45803;&#44592;</button>
+    </div>
+    <div class="m-arena" id="mArena"></div>
+    <div class="m-grid" id="mGrid"></div>
+    <div class="m-desc" id="mDesc"></div>
+    <div class="m-foot">
+      <div>
+        <div style="font-size:13px;color:var(--text-dim)">
+          &#51089;&#49457;&#51088;: <span id="mAuthor" style="color:var(--accent)"></span>
+          &nbsp;|&nbsp; &#45216;&#51088;: <span id="mDate"></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="like-btn" id="mLikeBtn" onclick="modalLike()">
+          &#10084;&#65039; <span id="mLikeCount">0</span>
+        </button>
+        <a href="editor_test.html" class="btn-oped">&#9997;&#65039; &#50640;&#45224;&#53552;&#50640;&#49436; &#50676;&#44592;</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var ROWS = [{len:2},{len:5},{len:6},{len:6},{len:7},{len:6},{len:6},{len:5},{len:2}];
+var INDENTS = [12,8,6,2,0,2,0,2,0];
+var LG_INDENTS = [48,32,22,12,0,12,0,12,0];
+
+var TILE_COLORS = {};
+TILE_COLORS[1]  = '#27ae60';
+TILE_COLORS[-1] = '#c0392b';
+TILE_COLORS[-3] = '#555';
+TILE_COLORS[-4] = '#4a4a6a';
+TILE_COLORS[-2] = '#f39c12';
+TILE_COLORS[0]  = 'rgba(255,255,255,.06)';
+
+var MINI_CLS = {};
+MINI_CLS[1]  = 'mh-p';
+MINI_CLS[-1] = 'mh-e';
+MINI_CLS[-3] = 'mh-o';
+MINI_CLS[-4] = 'mh-w';
+MINI_CLS[-2] = 'mh-a';
+MINI_CLS[0]  = 'mh-n';
+
+// 샘플 포스트 (tiles 분리)
+var T_ARENA1  = [-1,-1,0,-1,-1,-1,-1,0,0,-1,-1,-1,-1,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,1,0,0,1,1,1,1,0,1,1];
+var T_SUPV    = [-2,-1,-1,-1,-2,-2,-1,-3,-1,-1,0,-2,-2,0,-3,0,0,-1,-1,0,0,0,-1,0,-1,-1,1,1,0,0,-3,-3,1,1,1,1,0,0,1,1,1,1,0,1,1];
+var T_THAL    = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0,1,1,1,1,0,1,1];
+var T_ARENA3  = [0,-1,0,0,0,-1,-1,0,-3,-3,-1,-1,-1,1,-3,0,-1,-1,-3,1,-3,0,0,0,-3,-1,-3,1,1,0,-3,-1,1,1,1,-3,-3,0,1,1,0,0,0,1,0];
+var T_SUP14   = [0,-1,-1,0,0,-1,-1,-1,-3,-3,-3,0,0,-1,-2,-1,0,-3,0,0,-3,1,0,-1,-3,0,0,-3,0,1,-2,1,0,0,-3,-3,-3,1,1,1,0,0,1,1,0];
+var T_ARENA4  = [-1,-1,0,-1,-1,-1,0,1,0,0,-1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,0,0,1,0,0,-1,0,1,1,1,0,1,1];
+
+var SAMPLE_POSTS = [
+  {id:1000,title:'Arena I 기본 공략 편성',arena:'Arena I',desc:'탱커 앞배치 + 딜러 후방 조합. 서포터 2명 필수.',author:'길드마스터',formationCount:2,date:'2026-03-01',likes:12,tiles:T_ARENA1},
+  {id:1001,title:'Supreme Arena V 최강 조합',arena:'Supreme Arena V',desc:'아티팩트 활용 극대화 전략. 마법사 3명 + 서포터 2명 + 탱커 1명.',author:'레이더왕',formationCount:1,date:'2026-03-02',likes:28,tiles:T_SUPV},
+  {id:1002,title:'Thalassa 속공 전략',arena:'Thalassa',desc:'빠른 속도로 적 진영 침투. 도적 + 전사 조합 추천.',author:'전략가',formationCount:3,date:'2026-03-03',likes:7,tiles:T_THAL},
+  {id:1003,title:'Arena III 역습 편성',arena:'Arena III',desc:'중앙 집중 배치로 역습 타이밍 잡기. 방어적 운영 선호자에게 추천.',author:'수비왕',formationCount:5,date:'2026-03-04',likes:15,tiles:T_ARENA3},
+  {id:1004,title:'Supreme Arena XIV 공략법',arena:'Supreme Arena XIV',desc:'최고 난이도 아레나 전략. 5개 진형 모두 필요.',author:'최강자',formationCount:5,date:'2026-03-05',likes:42,tiles:T_SUP14},
+  {id:1005,title:'Arena IV 빠른 진입 전략',arena:'Arena IV',desc:'적 진영 앞쪽을 빠르게 제압하는 전략.',author:'공격왕',formationCount:2,date:'2026-03-05',likes:9,tiles:T_ARENA4},
+];
+
+var currentPost = null;
+var likedPosts = [];
+try { likedPosts = JSON.parse(localStorage.getItem('roider_liked') || '[]'); } catch(e) {}
+
+function getPosts() {
+  var stored = [];
+  try { stored = JSON.parse(localStorage.getItem('roider_posts') || '[]'); } catch(e) {}
+  var ids = {};
+  stored.forEach(function(p){ ids[p.id] = true; });
+  var all = stored.slice();
+  SAMPLE_POSTS.forEach(function(p){ if(!ids[p.id]) all.push(p); });
+  return all;
+}
+
+function savePosts(posts) {
+  var sampleIds = {};
+  SAMPLE_POSTS.forEach(function(p){ sampleIds[p.id] = true; });
+  var userPosts = posts.filter(function(p){ return !sampleIds[p.id]; });
+  try { localStorage.setItem('roider_posts', JSON.stringify(userPosts)); } catch(e) {}
+}
+
+function buildMiniGrid(tiles) {
+  var wrap = document.createElement('div');
+  wrap.className = 'mg';
+  var idx = 0;
+  ROWS.forEach(function(row, ri) {
+    var rowEl = document.createElement('div');
+    rowEl.className = 'mg-row';
+    rowEl.style.paddingLeft = (INDENTS[ri] * 1.5) + 'px';
+    for (var c = 0; c < row.len; c++) {
+      var v = (tiles && tiles[idx] !== undefined) ? tiles[idx] : 0;
+      var t = document.createElement('div');
+      t.className = 'mh ' + (MINI_CLS[v] || 'mh-n');
+      rowEl.appendChild(t);
+      idx++;
+    }
+    wrap.appendChild(rowEl);
+  });
+  return wrap;
+}
+
+function buildLargeGrid(tiles) {
+  var wrap = document.createElement('div');
+  wrap.className = 'lg';
+  var idx = 0;
+  ROWS.forEach(function(row, ri) {
+    var rowEl = document.createElement('div');
+    rowEl.className = 'lg-row';
+    rowEl.style.paddingLeft = LG_INDENTS[ri] + 'px';
+    for (var c = 0; c < row.len; c++) {
+      var v = (tiles && tiles[idx] !== undefined) ? tiles[idx] : 0;
+      var t = document.createElement('div');
+      t.className = 'lh';
+      t.style.background = TILE_COLORS[v] || 'rgba(255,255,255,.06)';
+      rowEl.appendChild(t);
+      idx++;
+    }
+    wrap.appendChild(rowEl);
+  });
+  return wrap;
+}
+
+function likePost(id, btn) {
+  var posts = getPosts();
+  var p = null;
+  for (var i = 0; i < posts.length; i++) { if (posts[i].id === id) { p = posts[i]; break; } }
+  if (!p) return;
+  var liked = likedPosts.indexOf(id) >= 0;
+  if (liked) {
+    p.likes = Math.max(0, p.likes - 1);
+    likedPosts = likedPosts.filter(function(x){ return x !== id; });
+    btn.classList.remove('liked');
+  } else {
+    p.likes++;
+    likedPosts.push(id);
+    btn.classList.add('liked');
+  }
+  btn.innerHTML = '&#10084;&#65039; ' + p.likes;
+  savePosts(posts);
+  try { localStorage.setItem('roider_liked', JSON.stringify(likedPosts)); } catch(e) {}
+  if (currentPost && currentPost.id === id) {
+    currentPost.likes = p.likes;
+    document.getElementById('mLikeCount').textContent = p.likes;
+    if (likedPosts.indexOf(id) >= 0) document.getElementById('mLikeBtn').classList.add('liked');
+    else document.getElementById('mLikeBtn').classList.remove('liked');
+  }
+}
+
+function openDetail(p) {
+  currentPost = p;
+  document.getElementById('mTitle').textContent = p.title;
+  document.getElementById('mArena').textContent = p.arena + '  |  ' + p.formationCount + '개 진형';
+  var grid = document.getElementById('mGrid');
+  grid.innerHTML = '';
+  grid.appendChild(buildLargeGrid(p.tiles));
+  document.getElementById('mDesc').textContent = p.desc || '설명 없음';
+  document.getElementById('mAuthor').textContent = p.author;
+  document.getElementById('mDate').textContent = p.date;
+  document.getElementById('mLikeCount').textContent = p.likes;
+  var lb = document.getElementById('mLikeBtn');
+  if (likedPosts.indexOf(p.id) >= 0) lb.classList.add('liked');
+  else lb.classList.remove('liked');
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('show');
+  currentPost = null;
+}
+
+function modalLike() {
+  if (!currentPost) return;
+  likePost(currentPost.id, document.getElementById('mLikeBtn'));
+  renderPosts();
+}
+
+function updateStats(posts) {
+  document.getElementById('statTotal').textContent = posts.length;
+  var today = new Date().toLocaleDateString('ko-KR');
+  var todayCount = 0;
+  posts.forEach(function(p){ if(p.date === today) todayCount++; });
+  document.getElementById('statToday').textContent = todayCount;
+  var totalLikes = 0;
+  posts.forEach(function(p){ totalLikes += (p.likes || 0); });
+  document.getElementById('statLikes').textContent = totalLikes;
+}
+
+function renderPosts() {
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  var arenaF = document.getElementById('arenaFilter').value;
+  var fmF = document.getElementById('fmFilter').value;
+  var sort = document.getElementById('sortFilter').value;
+
+  var posts = getPosts().filter(function(p) {
+    if (q && p.title.toLowerCase().indexOf(q) < 0 && p.author.toLowerCase().indexOf(q) < 0) return false;
+    if (arenaF && p.arena !== arenaF) return false;
+    if (fmF && String(p.formationCount) !== fmF) return false;
+    return true;
+  });
+
+  if (sort === 'likes') posts.sort(function(a,b){ return b.likes - a.likes; });
+  else posts.sort(function(a,b){ return b.id - a.id; });
+
+  var grid = document.getElementById('postsGrid');
+  grid.innerHTML = '';
+
+  if (!posts.length) {
+    var empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerHTML = '<div class="empty-icon">&#128493;</div><p>공유된 편성이 없습니다</p>';
+    grid.appendChild(empty);
+    updateStats([]);
+    return;
+  }
+
+  posts.forEach(function(p) {
+    var card = document.createElement('div');
+    card.className = 'post-card';
+
+    // 제목
+    var titleEl = document.createElement('div');
+    titleEl.className = 'post-title';
+    titleEl.textContent = p.title;
+    card.appendChild(titleEl);
+
+    // 배지
+    var badges = document.createElement('div');
+    badges.className = 'post-badges';
+    var b1 = document.createElement('span');
+    b1.className = 'badge ba';
+    b1.textContent = '🗺 ' + p.arena;
+    var b2 = document.createElement('span');
+    b2.className = 'badge bf';
+    b2.textContent = '⚔️ ' + p.formationCount + '개 진형';
+    badges.appendChild(b1);
+    badges.appendChild(b2);
+    card.appendChild(badges);
+
+    // 미니 프리뷰
+    var preview = document.createElement('div');
+    preview.className = 'post-preview';
+    preview.appendChild(buildMiniGrid(p.tiles));
+    card.appendChild(preview);
+
+    // 설명
+    var desc = document.createElement('div');
+    desc.className = 'post-desc';
+    desc.textContent = p.desc || '설명 없음';
+    card.appendChild(desc);
+
+    // 하단
+    var foot = document.createElement('div');
+    foot.className = 'post-foot';
+    var authorEl = document.createElement('div');
+    authorEl.innerHTML = '<div class="post-author">👤 ' + p.author + '</div><div class="post-date">📅 ' + p.date + '</div>';
+    var likeBtn = document.createElement('button');
+    likeBtn.className = 'like-btn' + (likedPosts.indexOf(p.id) >= 0 ? ' liked' : '');
+    likeBtn.innerHTML = '❤️ ' + p.likes;
+    likeBtn.onclick = function(e) {
+      e.stopPropagation();
+      likePost(p.id, likeBtn);
+    };
+    foot.appendChild(authorEl);
+    foot.appendChild(likeBtn);
+    card.appendChild(foot);
+
+    card.addEventListener('click', function() { openDetail(p); });
+    grid.appendChild(card);
+  });
+
+  updateStats(posts);
+}
+
+// 모달 외부 클릭 닫기
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('detailModal')) closeDetail();
+});
+
+// 초기 렌더
+renderPosts();
+</script>
+</body>
+</html>

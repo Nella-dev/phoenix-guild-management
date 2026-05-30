@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+  <meta charset="UTF-8">
+
+<style>
+/* 🔒 Header profile image standard (force main style) */
+header .user-box img {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 1px solid #444 !important;
+}
+/* 🔒 Logout button standard (prevent green override) */
+button.logout {
+  background: transparent !important;
+  border: 1px solid #555 !important;
+  color: #ccc !important;
+}
+</style>
+
+</head>
+<body>
+<header>
+    <div class="logo" id="appTitle">ROIDER</div>
+    <div class="user-box">
+      <img id="userPhoto" src="" alt="profile" />
+      <span id="userName">Loading...</span>
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+</body>
+</html>

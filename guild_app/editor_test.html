@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROIDER - 포메이션 에디터</title>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   ROIDER THEME – YAPHALLA-IDENTICAL ENGINE
+═══════════════════════════════════════════ */
+:root{
+  --bg:#0f1015; --card:#1c1f2a; --card2:#161921;
+  --accent:#f4c430; --accent2:#e8a020;
+  --text:#e6e6e6; --text-dim:#888;
+  --border:#2a3242;
+  --player:#27ae60; --enemy:#c0392b;
+  --obstacle:#7f8c8d; --artifact:#f39c12;
+  --hs:52px;           /* hex size */
+  --hg:4px;            /* hex gap */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);
+  font-family:'NEXON Lv1 Gothic OTF',-apple-system,sans-serif;
+  min-height:100vh;overflow-x:hidden}
+
+/* ── 헤더 ── */
+.ed-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;
+  background:linear-gradient(135deg,#1f2933,#121721);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.ed-logo{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;color:var(--accent);text-decoration:none}
+.ed-nav{display:flex;gap:8px;align-items:center}
+.ed-nav a{color:var(--text-dim);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:4px}
+.ed-nav a:hover{background:rgba(244,196,48,.1);color:var(--accent)}
+
+/* ── 메인 레이아웃 ── */
+.ed-wrap{display:flex;height:calc(100vh - 52px)}
+
+/* ── 왼쪽 패널 ── */
+.lib-panel{
+  width:260px;min-width:260px;
+  background:var(--card2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.lib-head{padding:12px;border-bottom:1px solid var(--border)}
+.lib-tabs{display:flex;gap:4px;margin-bottom:8px}
+.lib-tab{flex:1;padding:6px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit}
+.lib-tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.lib-search{width:100%;padding:6px 10px;background:#0f1015;border:1px solid var(--border);
+  color:var(--text);border-radius:4px;font-size:12px;font-family:inherit}
+.lib-search:focus{outline:none;border-color:var(--accent)}
+.filter-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.filter-btn{padding:3px 8px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);border-radius:12px;cursor:pointer;font-size:11px;font-family:inherit}
+.filter-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.lib-scroll{flex:1;overflow-y:auto;padding:8px}
+.lib-scroll::-webkit-scrollbar{width:4px}
+.lib-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.u-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.u-item{display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:4px;border-radius:6px;cursor:grab;border:1px solid var(--border);
+  transition:.2s;background:rgba(255,255,255,.02)}
+.u-item:hover{border-color:var(--accent);background:rgba(244,196,48,.08)}
+.u-hex-wrap{width:50px;height:50px;position:relative;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+.u-hex-wrap img{width:100%;height:100%;object-fit:cover}
+.u-name{font-size:9px;color:var(--text-dim);text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.art-section{margin-bottom:12px}
+.art-section-title{font-size:11px;color:var(--accent);font-weight:700;
+  margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+.art-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.art-item{display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 4px;border-radius:6px;cursor:pointer;border:1px solid var(--border);
+  transition:.2s;background:rgba(255,255,255,.02)}
+.art-item:hover{border-color:var(--artifact);background:rgba(243,156,18,.08)}
+.art-item.active{border-color:var(--artifact);background:rgba(243,156,18,.15)}
+.art-hex{width:44px;height:44px;position:relative;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+.art-hex img{width:100%;height:100%;object-fit:contain}
+.art-name{font-size:9px;color:var(--text-dim);text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+
+/* ── 중앙 영역 ── */
+.center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* 상단 툴바 */
+.top-bar{
+  background:var(--card2);border-bottom:1px solid var(--border);
+  padding:8px 16px;display:flex;flex-direction:column;gap:8px;
+}
+.top-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.team-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.team-tab{padding:4px 10px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit}
+.team-tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+
+/* 진형 버튼 (1~5개 진형) */
+.formation-btns{display:flex;gap:6px;align-items:center}
+.formation-label{font-size:12px;color:var(--text-dim);white-space:nowrap}
+.fmb{padding:5px 12px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;
+  transition:.2s;white-space:nowrap}
+.fmb:hover{border-color:var(--accent);color:var(--accent)}
+.fmb.active{background:rgba(244,196,48,.15);border-color:var(--accent);color:var(--accent);font-weight:700}
+
+/* 제어 버튼들 */
+.ctrl-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn{padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;transition:.2s}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-red{background:#8b0000;border:1px solid #c0392b;color:#fff}
+.btn-red:hover{background:#c0392b}
+.btn-gold{background:var(--accent);border:1px solid var(--accent2);color:#000;font-weight:700}
+.btn-gold:hover{background:var(--accent2)}
+.btn-share{background:linear-gradient(135deg,#1a6b3a,#0d4225);border:1px solid #27ae60;color:#4ade80;font-weight:700}
+.btn-share:hover{background:linear-gradient(135deg,#27ae60,#1a6b3a)}
+
+/* 토글 */
+.toggle-group{display:flex;gap:8px;flex-wrap:wrap}
+.tog-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;
+  border:1px solid var(--border);border-radius:4px;cursor:pointer;
+  font-size:12px;color:var(--text-dim);background:transparent;font-family:inherit}
+.tog-btn.on{color:var(--accent);border-color:var(--accent)}
+.tog-track{width:28px;height:14px;border-radius:7px;background:#333;position:relative;transition:.2s}
+.tog-btn.on .tog-track{background:var(--accent)}
+.tog-thumb{width:10px;height:10px;border-radius:50%;background:#666;position:absolute;top:2px;left:2px;transition:.2s}
+.tog-btn.on .tog-thumb{left:16px;background:#000}
+
+/* 타일 모드 버튼 */
+.tile-mode-bar{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.tile-mode-label{font-size:11px;color:var(--text-dim)}
+.tmode{padding:4px 10px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit}
+.tmode:hover{border-color:var(--accent);color:var(--text)}
+.tmode.active{border-color:var(--accent);color:var(--accent);background:rgba(244,196,48,.1)}
+
+/* ── HEX 그리드 ── */
+.grid-area{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:24px}
+.hex-grid-outer{display:flex;flex-direction:column;gap:var(--hg);align-items:flex-start}
+.hex-row{display:flex;gap:var(--hg)}
+
+/* 행별 들여쓰기 (yaphalla 원본과 동일) */
+.hex-row.r0{padding-left:84px}   /* pl-60 → 약 84px */
+.hex-row.r1{padding-left:42px}   /* pl-30 */
+.hex-row.r2{padding-left:28px}   /* pl-20 */
+.hex-row.r3{padding-left:14px}   /* pl-10 */
+.hex-row.r4{padding-left:0}
+.hex-row.r5{padding-left:14px}
+.hex-row.r6{padding-left:0}
+.hex-row.r7{padding-left:14px}
+.hex-row.r8{padding-left:0}
+
+/* 헥스 타일 */
+.htile{
+  width:var(--hs);height:var(--hs);
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  position:relative;cursor:pointer;transition:filter .15s,transform .15s;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.htile:hover{filter:brightness(1.3);transform:scale(1.05);z-index:2}
+.htile.drag-over{filter:brightness(1.6);transform:scale(1.08)}
+
+/* 타일 타입별 배경 */
+.htile.t-empty   {background:rgba(255,255,255,.04);cursor:default;pointer-events:none}
+.htile.t-player  {background:radial-gradient(circle,#1e3a2a,#0d2218)}
+.htile.t-enemy   {background:radial-gradient(circle,#3a1a1a,#220d0d)}
+.htile.t-obstacle{background:radial-gradient(circle,#3a3a3a,#222);cursor:not-allowed}
+.htile.t-wall    {background:radial-gradient(circle,#2a2a4a,#1a1a2e)}
+.htile.t-artifact{background:radial-gradient(circle,#3a2800,#1e1400)}
+
+/* 타일 테두리 (::before 이미지) */
+.htile::before{
+  content:'';position:absolute;inset:0;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+  pointer-events:none;z-index:1;
+}
+.htile.t-player::before  {background-image:url('https://www.yaphalla.com/assets/images/hexes/base/Generic-Outline.png')}
+.htile.t-enemy::before   {background-image:url('https://www.yaphalla.com/assets/images/hexes/base/Enemy-Outline.png')}
+.htile.t-obstacle::before{background-image:url('https://www.yaphalla.com/assets/images/hexes/base/Unbreakable-Hex.png')}
+.htile.t-wall::before    {background-image:url('https://www.yaphalla.com/assets/images/hexes/base/Breakable-Hex.png')}
+.htile.t-artifact::before{background-image:url('https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png')}
+
+/* 번호 */
+.tile-num{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:13px;font-weight:800;color:#fff;z-index:3;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:none;
+}
+.htile.t-artifact .tile-num{color:var(--artifact);font-size:11px}
+.htile.t-enemy .tile-num{color:#ff6b6b}
+.hide-num .tile-num{display:none!important}
+
+/* 타일 위 유닛 */
+.tile-unit{
+  position:absolute;inset:4px;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  z-index:2;
+}
+.tile-unit img{width:100%;height:100%;object-fit:cover}
+.tile-del{
+  position:absolute;top:2px;right:6px;
+  background:rgba(200,0,0,.85);color:#fff;
+  border:none;border-radius:50%;width:16px;height:16px;
+  cursor:pointer;font-size:10px;display:none;
+  align-items:center;justify-content:center;z-index:5;
+}
+.htile:hover .tile-del{display:flex}
+.tile-artifact{position:absolute;inset:8px;z-index:2;display:flex;align-items:center;justify-content:center}
+.tile-artifact img{width:65%;height:65%;object-fit:contain}
+
+/* 팀 점 */
+.tile-team{
+  position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+  width:7px;height:7px;border-radius:50%;border:1px solid rgba(0,0,0,.5);z-index:4;
+}
+
+/* 숨김 토글 */
+.hide-enemy .htile.t-enemy{opacity:.3;pointer-events:none}
+.hide-grid .htile.t-player::before,.hide-grid .htile.t-enemy::before,
+.hide-grid .htile.t-obstacle::before,.hide-grid .htile.t-wall::before,
+.hide-grid .htile.t-artifact::before{opacity:0}
+.hide-art .htile.t-artifact{opacity:.3;pointer-events:none}
+
+/* 중복 경고 */
+.htile.dup-warn::after{
+  content:'!';position:absolute;top:2px;left:6px;
+  background:#e74c3c;color:#fff;
+  border-radius:50%;width:14px;height:14px;
+  font-size:10px;display:flex;align-items:center;justify-content:center;
+  font-weight:700;z-index:6;
+}
+
+/* ── 하단 버튼 영역 ── */
+.bottom-bar{
+  background:var(--card2);border-top:1px solid var(--border);
+  padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+}
+
+/* ── 오른쪽 패널 (아레나 선택) ── */
+.right-panel{
+  width:320px;min-width:280px;
+  background:var(--card2);border-left:1px solid var(--border);
+  overflow-y:auto;
+}
+.right-panel::-webkit-scrollbar{width:4px}
+.right-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.arena-list-head{padding:12px 16px;border-bottom:1px solid var(--border);
+  font-size:13px;font-weight:700;color:var(--accent)}
+.arena-card{
+  padding:10px 12px;border-bottom:1px solid rgba(42,50,66,.5);
+  cursor:pointer;display:flex;align-items:center;gap:10px;transition:.2s;
+}
+.arena-card:hover{background:rgba(244,196,48,.06)}
+.arena-card.active{background:rgba(244,196,48,.12);border-left:3px solid var(--accent)}
+.arena-card-name{font-size:12px;font-weight:600;color:var(--text)}
+.arena-card.active .arena-card-name{color:var(--accent)}
+.arena-preview{width:60px;height:54px;flex-shrink:0}
+.ap-grid{display:flex;flex-direction:column;gap:1px;align-items:flex-start}
+.ap-row{display:flex;gap:1px}
+.ap-tile{
+  width:7px;height:7px;border-radius:1px;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+}
+.ap-tile.p{background:#27ae60}.ap-tile.e{background:#c0392b}
+.ap-tile.o{background:#555}.ap-tile.w{background:#4a4a6a}
+.ap-tile.a{background:#f39c12}.ap-tile.n{background:rgba(255,255,255,.06)}
+
+/* ── 공유 모달 ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.75);z-index:200;
+  align-items:center;justify-content:center;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  width:480px;max-width:95vw;padding:24px;
+}
+.modal-title{font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px}
+.modal-label{font-size:12px;color:var(--text-dim);margin-bottom:4px}
+.modal-input{
+  width:100%;padding:8px 12px;background:#0f1015;
+  border:1px solid var(--border);color:var(--text);
+  border-radius:6px;font-size:13px;font-family:inherit;margin-bottom:12px;
+}
+.modal-input:focus{outline:none;border-color:var(--accent)}
+.modal-textarea{resize:vertical;min-height:80px}
+.formation-count-label{font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.formation-count-btns{display:flex;gap:6px;margin-bottom:12px}
+.fc-btn{padding:5px 14px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit}
+.fc-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+
+/* ── 반응형 ── */
+@media(max-width:1100px){
+  .right-panel{display:none}
+  :root{--hs:46px}
+}
+@media(max-width:800px){
+  .lib-panel{width:220px;min-width:220px}
+  :root{--hs:40px}
+  .hex-row.r0{padding-left:64px}
+  .hex-row.r1{padding-left:32px}
+  .hex-row.r2{padding-left:22px}
+  .hex-row.r3{padding-left:11px}
+}
+</style>
+<script src="i18n_deck.js" defer></script>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="ed-header">
+  <a class="ed-logo" href="/">
+    <span style="font-size:22px">⚔️</span> ROIDER
+  </a>
+  <nav class="ed-nav">
+    <a href="index.html">🏠 홈</a>
+    <a href="formation_board_test.html">📋 편성 게시판</a>
+    <a href="members.html">👥 멤버</a>
+    <a href="strategy.html">🗺️ 전략</a>
+  </nav>
+  <div id="loginArea" style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:12px;color:var(--text-dim)" id="userLabel">게스트</span>
+    <button class="btn btn-ghost" onclick="promptLogin()">로그인</button>
+  </div>
+</header>
+
+<div class="ed-wrap">
+
+  <!-- 왼쪽 라이브러리 패널 -->
+  <aside class="lib-panel">
+    <div class="lib-head">
+      <div class="lib-tabs">
+        <button class="lib-tab active" onclick="switchLib('units',this)">영웅</button>
+        <button class="lib-tab" onclick="switchLib('artifacts',this)">아티팩트</button>
+      </div>
+      <!-- 영웅 탭 -->
+      <div id="libUnitsHead">
+        <input class="lib-search" id="heroSearch" placeholder="영웅 검색..." oninput="renderLib()">
+        <div class="filter-row" id="classFilters">
+          <button class="filter-btn active" onclick="toggleFilter('class','ALL',this)">전체</button>
+          <button class="filter-btn" onclick="toggleFilter('class','Tank',this)">탱커</button>
+          <button class="filter-btn" onclick="toggleFilter('class','Support',this)">서포트</button>
+          <button class="filter-btn" onclick="toggleFilter('class','Mage',this)">마법사</button>
+          <button class="filter-btn" onclick="toggleFilter('class','Warrior',this)">전사</button>
+          <button class="filter-btn" onclick="toggleFilter('class','Rogue',this)">도적</button>
+          <button class="filter-btn" onclick="toggleFilter('class','Marksman',this)">궁수</button>
+        </div>
+        <div class="filter-row" id="factionFilters" style="margin-top:4px">
+          <button class="filter-btn active" onclick="toggleFilter('faction','ALL',this)">전체</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Lightbearer',this)">빛의수호</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Wilder',this)">야생</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Mauler',this)">야만</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Graveborn',this)">묘생</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Celestial',this)">천상</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Hypogean',this)">지하</button>
+          <button class="filter-btn" onclick="toggleFilter('faction','Dimensional',this)">차원</button>
+        </div>
+      </div>
+      <!-- 아티팩트 탭 검색 -->
+      <div id="libArtHead" style="display:none">
+        <input class="lib-search" id="artSearch" placeholder="아티팩트 검색..." oninput="renderArtLib()">
+      </div>
+    </div>
+    <div class="lib-scroll">
+      <div id="libUnits"><div class="u-grid" id="uGrid"></div></div>
+      <div id="libArtifacts" style="display:none" id="artScroll"></div>
+    </div>
+  </aside>
+
+  <!-- 중앙 패널 -->
+  <main class="center-panel">
+    <!-- 상단 툴바 -->
+    <div class="top-bar">
+      <!-- 팀 탭 -->
+      <div class="top-row">
+        <div class="team-tabs" id="teamTabs"></div>
+        <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="checkDuplicates()">🔍 중복 체크</button>
+          <button class="btn btn-red" onclick="clearAllUnits()">🗑 전체 초기화</button>
+        </div>
+      </div>
+      <!-- 진형 수 버튼 (1~5개 진형) -->
+      <div class="top-row">
+        <div class="formation-btns">
+          <span class="formation-label">진형 수:</span>
+          <button class="fmb active" id="fm1" onclick="setFormationCount(1,this)">1개 진형</button>
+          <button class="fmb" id="fm2" onclick="setFormationCount(2,this)">2개 진형</button>
+          <button class="fmb" id="fm3" onclick="setFormationCount(3,this)">3개 진형</button>
+          <button class="fmb" id="fm4" onclick="setFormationCount(4,this)">4개 진형</button>
+          <button class="fmb" id="fm5" onclick="setFormationCount(5,this)">5개 진형</button>
+        </div>
+      </div>
+      <!-- 토글 + 타일 모드 -->
+      <div class="top-row">
+        <div class="toggle-group">
+          <button class="tog-btn on" id="tog-grid" onclick="toggleOpt('grid',this)">
+            <div class="tog-track"><div class="tog-thumb"></div></div>그리드
+          </button>
+          <button class="tog-btn on" id="tog-enemy" onclick="toggleOpt('enemy',this)">
+            <div class="tog-track"><div class="tog-thumb"></div></div>적 타일
+          </button>
+          <button class="tog-btn on" id="tog-num" onclick="toggleOpt('num',this)">
+            <div class="tog-track"><div class="tog-thumb"></div></div>번호
+          </button>
+          <button class="tog-btn on" id="tog-art" onclick="toggleOpt('art',this)">
+            <div class="tog-track"><div class="tog-thumb"></div></div>아티팩트
+          </button>
+        </div>
+        <div style="margin-left:12px" class="tile-mode-bar">
+          <span class="tile-mode-label">타일 편집:</span>
+          <button class="tmode active" id="tm-unit" onclick="setTileMode('unit',this)">👤 유닛</button>
+          <button class="tmode" id="tm-obstacle" onclick="setTileMode('obstacle',this)">🧱 장애물</button>
+          <button class="tmode" id="tm-wall" onclick="setTileMode('wall',this)">💥 파괴가능</button>
+          <button class="tmode" id="tm-erase" onclick="setTileMode('erase',this)">🗑 지우기</button>
+          <button class="tmode" id="tm-invert" onclick="invertTiles()">🔄 반전</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 헥스 그리드 영역 -->
+    <div class="grid-area">
+      <div class="hex-grid-outer" id="hexGrid"></div>
+    </div>
+
+    <!-- 하단 버튼 -->
+    <div class="bottom-bar">
+      <button class="btn btn-ghost" onclick="clearCurrentTeam()">🗑 현재 팀 초기화</button>
+      <button class="btn btn-ghost" onclick="copyToClipboard()">📋 클립보드 복사</button>
+      <button class="btn btn-ghost" onclick="savePNG()">🖼 PNG 저장</button>
+      <button class="btn btn-share" onclick="openShareModal()">📤 편성 공유 게시판에 공유</button>
+    </div>
+  </main>
+
+  <!-- 오른쪽 아레나 선택 패널 -->
+  <aside class="right-panel">
+    <div class="arena-list-head">🗺 아레나 선택</div>
+    <div id="arenaList"></div>
+  </aside>
+
+</div>
+
+<!-- 공유 모달 -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal">
+    <div class="modal-title">📤 편성 공유 게시판에 공유</div>
+
+    <div class="modal-label">진형 제목</div>
+    <input class="modal-input" id="shareTitle" placeholder="예: 아레나1 최강 조합">
+
+    <div class="modal-label">현재 아레나</div>
+    <input class="modal-input" id="shareArena" readonly style="color:var(--accent)">
+
+    <div class="modal-label">진형 수</div>
+    <div class="formation-count-btns" id="shareFormCount">
+      <button class="fc-btn active" onclick="setShareCount(1,this)">1개</button>
+      <button class="fc-btn" onclick="setShareCount(2,this)">2개</button>
+      <button class="fc-btn" onclick="setShareCount(3,this)">3개</button>
+      <button class="fc-btn" onclick="setShareCount(4,this)">4개</button>
+      <button class="fc-btn" onclick="setShareCount(5,this)">5개</button>
+    </div>
+
+    <div class="modal-label">설명 (선택)</div>
+    <textarea class="modal-input modal-textarea" id="shareDesc" placeholder="진형 전략이나 조합 설명을 입력하세요..."></textarea>
+
+    <div class="modal-label">작성자 닉네임</div>
+    <input class="modal-input" id="shareAuthor" placeholder="닉네임">
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeShareModal()">취소</button>
+      <button class="btn btn-share" onclick="submitShare()">공유하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   DATA
+═══════════════════════════════════ */
+
+// 그리드 행 구성: [행 길이, 들여쓰기 클래스]
+const ROWS = [
+  {len:2, cls:'r0'},
+  {len:5, cls:'r1'},
+  {len:6, cls:'r2'},
+  {len:6, cls:'r3'},
+  {len:7, cls:'r4'},
+  {len:6, cls:'r5'},
+  {len:6, cls:'r6'},
+  {len:5, cls:'r7'},
+  {len:2, cls:'r8'},
+]; // 총 45타일
+
+// 타일 인덱스 → 번호 매핑 (yaphalla 원본 a[] 배열)
+// a[i] = 해당 인덱스의 표시 번호 (플레이어/적 번호)
+const TILE_NUM_MAP = [43,45,35,38,40,42,44,28,31,34,37,39,41,21,24,27,30,33,36,14,17,20,23,26,29,32,10,13,16,19,22,25,5,7,9,12,15,18,2,4,6,8,11,1,3];
+
+// 아레나 타일 데이터 (yaphalla 원본)
+// 값: 0=empty, 1=player, -1=enemy, -2=artifact, -3=obstacle(unbreakable), -4=wall(breakable)
+const ARENAS = {
+  'Custom': Array(45).fill(0),
+  'Thalassa': [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0,1,1,1,1,0,1,1],
+  'Arena I': [-1,-1,0,-1,-1,-1,-1,0,0,-1,-1,-1,-1,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,1,0,0,1,1,1,1,0,1,1],
+  'Arena II': [-1,-1,-3,-1,-1,-1,-1,-3,-3,-3,-3,-1,-1,0,0,0,0,-1,-1,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,-3,-3,-3,-3,1,1,1,1,-3,1,1],
+  'Arena III': [0,-1,0,0,0,-1,-1,0,-3,-3,-1,-1,-1,1,-3,0,-1,-1,-3,1,-3,0,0,0,-3,-1,-3,1,1,0,-3,-1,1,1,1,-3,-3,0,1,1,0,0,0,1,0],
+  'Arena IV': [-1,-1,0,-1,-1,-1,0,1,0,0,-1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,0,0,1,0,0,-1,0,1,1,1,0,1,1],
+  'Arena V': [-1,-1,-1,-1,0,0,-1,-1,0,-3,0,0,-1,1,0,-3,-1,-3,-1,1,0,-3,0,-3,0,-1,1,-3,1,-3,0,-1,1,0,0,-3,0,1,1,0,0,1,1,1,1],
+  'Arena V - Special': [-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,-1,-3,0,0,0,0,0,-1,-3,0,0,0,0,0,-3,0,0,0,0,1,1,1,1,0,1,1],
+  'Supreme Arena I': [0,-1,-1,-1,-1,-1,-1,0,0,0,0,0,-2,-2,0,0,-1,0,-2,1,-2,1,0,-1,-2,-1,-2,0,1,0,0,-2,-2,0,0,0,0,0,1,1,1,1,1,1,0],
+  'Supreme Arena II': [-1,-1,0,-1,-1,-1,-1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,0,0,0,0,0,-1,1,1,1,1,0,1,1],
+  'Supreme Arena III': [0,-1,-1,0,0,-1,-1,-1,0,0,0,0,0,-1,0,-3,-1,0,0,1,0,-3,0,-3,0,-1,0,0,1,-3,0,1,0,0,0,0,0,1,1,1,0,0,1,1,0],
+  'Supreme Arena IV': [-1,-1,0,-1,-1,-1,-1,1,0,-1,-1,-1,-1,1,-3,0,-1,-1,0,-3,-3,0,0,0,-3,-3,0,1,1,0,-3,-1,1,1,1,1,0,-1,1,1,1,1,0,1,1],
+  'Supreme Arena V': [-2,-1,-1,-1,-2,-2,-1,-3,-1,-1,0,-2,-2,0,-3,0,0,-1,-1,0,0,0,-1,0,-1,-1,1,1,0,0,-3,-3,1,1,1,1,0,0,1,1,1,1,0,1,1],
+  'Supreme Arena VI': [0,-1,-1,0,0,-1,-1,-1,-3,0,-1,0,0,-1,-3,0,0,0,0,0,-3,0,0,0,-3,-1,0,1,1,0,-3,-1,1,1,1,1,-3,-1,1,1,1,0,0,1,1],
+  'Supreme Arena VII': [-1,-1,-1,-2,-2,-2,-2,-1,-2,0,-1,-1,-1,-1,-2,0,0,-1,-1,-2,-2,0,0,0,-2,-2,1,1,0,0,-2,1,1,1,1,0,-2,1,-2,-2,-2,-2,1,1,1],
+  'Supreme Arena VIII': [-1,-1,0,-1,-1,-1,-1,1,0,0,-1,-1,-1,1,-3,0,-1,0,0,-3,-3,0,0,0,-3,-3,0,0,1,0,-3,-1,1,1,1,0,0,-1,1,1,1,1,0,1,1],
+  'Supreme Arena IX': [-1,-1,0,0,0,-1,-1,-1,-3,-3,-3,0,-1,-1,-2,1,1,-3,0,-1,-3,1,1,1,-3,0,0,-3,1,1,-2,-1,0,0,-2,-3,-3,-1,1,0,0,0,-1,1,0],
+  'Supreme Arena X': [-1,-1,-2,-2,-2,-2,-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,-2,-2,-2,-2,1,1],
+  'Supreme Arena XI': [-1,0,-1,-1,-3,-1,-1,0,0,-1,-3,0,-1,0,0,0,-3,0,0,0,1,0,-3,0,-1,0,0,0,-3,0,0,0,1,0,-3,1,0,0,1,1,-3,1,1,0,1],
+  'Supreme Arena XII': [-3,-1,-1,-1,-3,-1,0,-1,0,0,-3,-1,0,-1,0,0,-1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,1,-3,0,0,1,0,1,-3,1,1,1,-3],
+  'Supreme Arena XIII': [-1,-1,0,-1,-1,-1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,-1,0,0,0,0,0,-1,-1,0,0,0,0,0,-1,0,1,1,1,0,1,1],
+  'Supreme Arena XIV': [0,-1,-1,0,0,-1,-1,-1,-3,-3,-3,0,0,-1,-2,-1,0,-3,0,0,-3,1,0,-1,-3,0,0,-3,0,1,-2,1,0,0,-3,-3,-3,1,1,1,0,0,1,1,0],
+  'Ravaged Realm S4': [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1,1,1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,1],
+};
+
+// 영웅 데이터
+const HEROES = [
+  {id:'Lucius',name:'루시우스',cls:'Tank',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Lucius.png'},
+  {id:'Belinda',name:'벨린다',cls:'Mage',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Belinda.png'},
+  {id:'Fawkes',name:'폭스',cls:'Support',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Fawkes.png'},
+  {id:'Rowan',name:'로완',cls:'Support',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Rowan.png'},
+  {id:'Rosaline',name:'로잘린',cls:'Support',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Rosaline.png'},
+  {id:'Raine',name:'레인',cls:'Marksman',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Raine.png'},
+  {id:'Thane',name:'테인',cls:'Warrior',faction:'Lightbearer',img:'https://www.yaphalla.com/assets/images/heroes/Thane.png'},
+  {id:'Hewynn',name:'헤윈',cls:'Support',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Hewynn.png'},
+  {id:'Lyca',name:'리카',cls:'Marksman',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Lyca.png'},
+  {id:'Eironn',name:'에이론',cls:'Rogue',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Eironn.png'},
+  {id:'Vala',name:'발라',cls:'Rogue',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Vala.png'},
+  {id:'Florabelle',name:'플로라벨',cls:'Mage',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Florabelle.png'},
+  {id:'Silvina',name:'실비나',cls:'Rogue',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Silvina.png'},
+  {id:'Soren',name:'소렌',cls:'Mage',faction:'Wilder',img:'https://www.yaphalla.com/assets/images/heroes/Soren.png'},
+  {id:'Brutus',name:'브루투스',cls:'Tank',faction:'Mauler',img:'https://www.yaphalla.com/assets/images/heroes/Brutus.png'},
+  {id:'Saveas',name:'세이브아스',cls:'Warrior',faction:'Mauler',img:'https://www.yaphalla.com/assets/images/heroes/Saveas.png'},
+  {id:'Kren',name:'크렌',cls:'Marksman',faction:'Mauler',img:'https://www.yaphalla.com/assets/images/heroes/Kren.png'},
+  {id:'Smokey',name:'스모키',cls:'Support',faction:'Mauler',img:'https://www.yaphalla.com/assets/images/heroes/Smokey.png'},
+  {id:'Antandra',name:'안탄드라',cls:'Warrior',faction:'Mauler',img:'https://www.yaphalla.com/assets/images/heroes/Antandra.png'},
+  {id:'Satrana',name:'사트라나',cls:'Mage',faction:'Mauler',img:'https://www.yaphalla.com/assets/images/heroes/Satrana.png'},
+  {id:'Thoran',name:'쏘란',cls:'Tank',faction:'Graveborn',img:'https://www.yaphalla.com/assets/images/heroes/Thoran.png'},
+  {id:'Carolina',name:'캐롤라이나',cls:'Mage',faction:'Graveborn',img:'https://www.yaphalla.com/assets/images/heroes/Carolina.png'},
+  {id:'Niru',name:'니루',cls:'Support',faction:'Graveborn',img:'https://www.yaphalla.com/assets/images/heroes/Niru.png'},
+  {id:'Gravekeeper',name:'무덤지기',cls:'Warrior',faction:'Graveborn',img:'https://www.yaphalla.com/assets/images/heroes/Gravekeeper.png'},
+  {id:'Reinier',name:'레이니어',cls:'Rogue',faction:'Graveborn',img:'https://www.yaphalla.com/assets/images/heroes/Reinier.png'},
+  {id:'Igor',name:'이고르',cls:'Mage',faction:'Graveborn',img:'https://www.yaphalla.com/assets/images/heroes/Igor.png'},
+  {id:'Talene',name:'탈레네',cls:'Support',faction:'Celestial',img:'https://www.yaphalla.com/assets/images/heroes/Talene.png'},
+  {id:'Ezizh',name:'에지즈',cls:'Mage',faction:'Hypogean',img:'https://www.yaphalla.com/assets/images/heroes/Ezizh.png'},
+  {id:'Lucretia',name:'루크레티아',cls:'Warrior',faction:'Hypogean',img:'https://www.yaphalla.com/assets/images/heroes/Lucretia.png'},
+  {id:'Zolrath',name:'졸라스',cls:'Rogue',faction:'Dimensional',img:'https://www.yaphalla.com/assets/images/heroes/Zolrath.png'},
+];
+
+// 아티팩트 데이터
+const ARTIFACTS = {
+  'Pre-Season': [
+    {id:'awakening',name:'각성',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'starshard',name:'성석',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'enlightening',name:'깨달음',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'blazing',name:'화염',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'confining',name:'구속',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'ironwall',name:'철벽',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+  ],
+  'Season': [
+    {id:'season1',name:'시즌 I',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'season2',name:'시즌 II',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'season3',name:'시즌 III',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'season4',name:'시즌 IV',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+  ],
+  'Honor': [
+    {id:'honor1',name:'명예 I',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'honor2',name:'명예 II',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+    {id:'honor3',name:'명예 III',img:'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png'},
+  ],
+};
+
+/* ═══════════════════════════════════
+   STATE
+═══════════════════════════════════ */
+let currentArena = 'Arena I';
+let currentTeam = 1;
+let formationCount = 1;
+let shareFormCount = 1;
+let tileMode = 'unit';   // unit | obstacle | wall | erase
+let selectedHero = null;
+let selectedArtifact = null;
+let activeLibTab = 'units';
+let filterClass = 'ALL';
+let filterFaction = 'ALL';
+
+// 팀별 타일 데이터: teamData[팀번호][타일인덱스] = {hero, artifact}
+let teamData = {};
+for(let t=1;t<=15;t++) teamData[t] = Array(45).fill(null).map(()=>({hero:null,artifact:null}));
+
+// 아레나 커스텀 타일 (현재 선택된 아레나 기반)
+let customTiles = [...ARENAS['Arena I']];
+
+/* ═══════════════════════════════════
+   GRID RENDER
+═══════════════════════════════════ */
+function buildGrid(){
+  const grid = document.getElementById('hexGrid');
+  grid.innerHTML = '';
+  let idx = 0;
+  ROWS.forEach((row,ri)=>{
+    const rowEl = document.createElement('div');
+    rowEl.className = `hex-row ${row.cls}`;
+    for(let c=0;c<row.len;c++){
+      const tile = buildTile(idx);
+      rowEl.appendChild(tile);
+      idx++;
+    }
+    grid.appendChild(rowEl);
+  });
+  applyToggleClasses();
+}
+
+function buildTile(idx){
+  const val = customTiles[idx];
+  const el = document.createElement('div');
+  el.dataset.idx = idx;
+
+  let typeClass = 't-empty';
+  if(val===1)   typeClass='t-player';
+  else if(val===-1) typeClass='t-enemy';
+  else if(val===-2) typeClass='t-artifact';
+  else if(val===-3) typeClass='t-obstacle';
+  else if(val===-4) typeClass='t-wall';
+
+  el.className = `htile ${typeClass}`;
+
+  // 번호
+  if(val===1 || val===-1){
+    const numEl = document.createElement('div');
+    numEl.className = 'tile-num';
+    // 플레이어 타일에만 번호 표시 (yaphalla 방식)
+    numEl.textContent = TILE_NUM_MAP[idx] ?? (idx+1);
+    el.appendChild(numEl);
+  }
+  if(val===-2){
+    const numEl = document.createElement('div');
+    numEl.className = 'tile-num';
+    numEl.textContent = 'A';
+    el.appendChild(numEl);
+  }
+
+  // 유닛
+  const td = teamData[currentTeam][idx];
+  if(td && td.hero){
+    renderHeroOnTile(el,td.hero);
+  }
+  if(td && td.artifact && val===-2){
+    renderArtOnTile(el,td.artifact);
+  }
+
+  // 이벤트
+  if(typeClass !== 't-empty' && typeClass !== 't-obstacle'){
+    el.addEventListener('click',()=>onTileClick(idx,el));
+    el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag-over')});
+    el.addEventListener('dragleave',()=>el.classList.remove('drag-over'));
+    el.addEventListener('drop',e=>{
+      e.preventDefault();
+      el.classList.remove('drag-over');
+      const hid = e.dataTransfer.getData('heroId');
+      if(hid) placeHeroOnTile(idx, hid);
+    });
+  }
+
+  return el;
+}
+
+function renderHeroOnTile(el, heroId){
+  const hero = HEROES.find(h=>h.id===heroId);
+  if(!hero) return;
+  const unitEl = document.createElement('div');
+  unitEl.className = 'tile-unit';
+  const img = document.createElement('img');
+  img.src = hero.img;
+  img.onerror=()=>{img.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect fill="%23333" width="50" height="50"/><text fill="%23aaa" x="50%" y="55%" text-anchor="middle" font-size="8">'+hero.name+'</text></svg>'};
+  unitEl.appendChild(img);
+  el.appendChild(unitEl);
+
+  const del = document.createElement('button');
+  del.className = 'tile-del';
+  del.innerHTML = '×';
+  del.onclick = e=>{e.stopPropagation();removeFromTile(parseInt(el.dataset.idx))};
+  el.appendChild(del);
+
+  // 팀 점
+  const dot = document.createElement('div');
+  dot.className = 'tile-team';
+  dot.style.background = teamColor(currentTeam);
+  el.appendChild(dot);
+}
+
+function renderArtOnTile(el, artId){
+  const artEl = document.createElement('div');
+  artEl.className = 'tile-artifact';
+  const img = document.createElement('img');
+  img.src = 'https://www.yaphalla.com/assets/images/hexes/base/artifact/Artifact-Hex.png';
+  artEl.appendChild(img);
+  el.appendChild(artEl);
+}
+
+function teamColor(t){
+  const colors=['#f4c430','#3498db','#2ecc71','#e74c3c','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#8bc34a','#ff9800','#607d8b','#795548','#ff5722','#673ab7'];
+  return colors[(t-1)%colors.length];
+}
+
+/* ═══════════════════════════════════
+   TILE ACTIONS
+═══════════════════════════════════ */
+function onTileClick(idx, el){
+  const val = customTiles[idx];
+  if(tileMode==='erase'){
+    removeFromTile(idx);
+  } else if(tileMode==='obstacle'){
+    customTiles[idx] = -3;
+    buildGrid();
+  } else if(tileMode==='wall'){
+    customTiles[idx] = -4;
+    buildGrid();
+  } else if(tileMode==='unit'){
+    if(selectedHero){
+      placeHeroOnTile(idx, selectedHero);
+    } else if(selectedArtifact && val===-2){
+      teamData[currentTeam][idx].artifact = selectedArtifact;
+      buildGrid();
+    }
+  }
+}
+
+function placeHeroOnTile(idx, heroId){
+  teamData[currentTeam][idx].hero = heroId;
+  buildGrid();
+}
+
+function removeFromTile(idx){
+  teamData[currentTeam][idx] = {hero:null, artifact:null};
+  buildGrid();
+}
+
+/* ═══════════════════════════════════
+   ARENA SELECT
+═══════════════════════════════════ */
+function selectArena(name){
+  currentArena = name;
+  customTiles = [...ARENAS[name]];
+  // 팀 데이터 초기화
+  for(let t=1;t<=15;t++) teamData[t] = Array(45).fill(null).map(()=>({hero:null,artifact:null}));
+  buildGrid();
+  renderArenaList();
+  document.getElementById('shareArena').value = name;
+}
+
+function renderArenaList(){
+  const list = document.getElementById('arenaList');
+  list.innerHTML = '';
+  Object.keys(ARENAS).forEach(name=>{
+    const card = document.createElement('div');
+    card.className = 'arena-card' + (name===currentArena?' active':'');
+    card.onclick = ()=>selectArena(name);
+
+    // 미니 프리뷰
+    const preview = buildMiniPreview(ARENAS[name]);
+    card.appendChild(preview);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'arena-card-name';
+    nameEl.textContent = name;
+    card.appendChild(nameEl);
+    list.appendChild(card);
+  });
+}
+
+function buildMiniPreview(data){
+  const wrap = document.createElement('div');
+  wrap.className = 'arena-preview';
+  const grid = document.createElement('div');
+  grid.className = 'ap-grid';
+  let idx=0;
+  const offsets=[0,14,21,27,33,27,21,14,0]; // 행별 시작 오프셋(누적)
+  ROWS.forEach((row,ri)=>{
+    const rowEl = document.createElement('div');
+    rowEl.className = 'ap-row';
+    // 행별 들여쓰기
+    const indents=[6,4,3,1,0,1,0,1,0];
+    rowEl.style.paddingLeft=(indents[ri]*2)+'px';
+    for(let c=0;c<row.len;c++){
+      const t=document.createElement('div');
+      const v=data[idx];
+      let cls='n';
+      if(v===1)cls='p';else if(v===-1)cls='e';
+      else if(v===-3)cls='o';else if(v===-4)cls='w';
+      else if(v===-2)cls='a';
+      t.className=`ap-tile ${cls}`;
+      rowEl.appendChild(t);
+      idx++;
+    }
+    grid.appendChild(rowEl);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+/* ═══════════════════════════════════
+   TEAM TABS
+═══════════════════════════════════ */
+function buildTeamTabs(){
+  const c = document.getElementById('teamTabs');
+  c.innerHTML='';
+  for(let i=1;i<=15;i++){
+    const btn=document.createElement('button');
+    btn.className='team-tab'+(i===currentTeam?' active':'');
+    btn.textContent=`팀 ${i}`;
+    btn.onclick=()=>{currentTeam=i;buildTeamTabs();buildGrid()};
+    c.appendChild(btn);
+  }
+}
+
+/* ═══════════════════════════════════
+   LIB RENDER
+═══════════════════════════════════ */
+function switchLib(tab, btn){
+  activeLibTab = tab;
+  document.querySelectorAll('.lib-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('libUnitsHead').style.display = tab==='units'?'':'none';
+  document.getElementById('libArtHead').style.display   = tab==='artifacts'?'':'none';
+  document.getElementById('libUnits').style.display     = tab==='units'?'':'none';
+  document.getElementById('libArtifacts').style.display = tab==='artifacts'?'':'none';
+  if(tab==='artifacts') renderArtLib();
+}
+
+function toggleFilter(type, val, btn){
+  if(type==='class'){
+    filterClass=val;
+    document.querySelectorAll('#classFilters .filter-btn').forEach(b=>b.classList.remove('active'));
+  } else {
+    filterFaction=val;
+    document.querySelectorAll('#factionFilters .filter-btn').forEach(b=>b.classList.remove('active'));
+  }
+  btn.classList.add('active');
+  renderLib();
+}
+
+function renderLib(){
+  const q = document.getElementById('heroSearch').value.toLowerCase();
+  const grid = document.getElementById('uGrid');
+  grid.innerHTML='';
+  HEROES.filter(h=>{
+    if(filterClass!=='ALL' && h.cls!==filterClass) return false;
+    if(filterFaction!=='ALL' && h.faction!==filterFaction) return false;
+    if(q && !h.name.toLowerCase().includes(q) && !h.id.toLowerCase().includes(q)) return false;
+    return true;
+  }).forEach(h=>{
+    const el=document.createElement('div');
+    el.className='u-item'+(selectedHero===h.id?' ':' ');
+    el.draggable=true;
+    el.dataset.heroId=h.id;
+    el.innerHTML=`<div class="u-hex-wrap"><img src="${h.img}" onerror="this.src='data:image/svg+xml,<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"50\\" height=\\"50\\"><rect fill=\\"%23333\\" width=\\"50\\" height=\\"50\\"/></svg>'"></div><div class="u-name">${h.name}</div>`;
+    el.addEventListener('click',()=>{
+      selectedHero = selectedHero===h.id?null:h.id;
+      selectedArtifact = null;
+      renderLib();
+    });
+    el.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('heroId', h.id);
+      selectedHero = h.id;
+    });
+    if(selectedHero===h.id) el.style.borderColor='var(--accent)';
+    grid.appendChild(el);
+  });
+}
+
+function renderArtLib(){
+  const q = document.getElementById('artSearch').value.toLowerCase();
+  const wrap = document.getElementById('libArtifacts');
+  wrap.innerHTML='';
+  Object.entries(ARTIFACTS).forEach(([sec,arts])=>{
+    const filtered = arts.filter(a=>!q || a.name.toLowerCase().includes(q));
+    if(!filtered.length) return;
+    const secEl = document.createElement('div');
+    secEl.className='art-section';
+    secEl.innerHTML=`<div class="art-section-title">${sec}</div>`;
+    const grid = document.createElement('div');
+    grid.className='art-grid';
+    filtered.forEach(a=>{
+      const el=document.createElement('div');
+      el.className='art-item'+(selectedArtifact===a.id?' active':'');
+      el.innerHTML=`<div class="art-hex"><img src="${a.img}"></div><div class="art-name">${a.name}</div>`;
+      el.onclick=()=>{
+        selectedArtifact=selectedArtifact===a.id?null:a.id;
+        selectedHero=null;
+        renderArtLib();
+      };
+      grid.appendChild(el);
+    });
+    secEl.appendChild(grid);
+    wrap.appendChild(secEl);
+  });
+}
+
+/* ═══════════════════════════════════
+   CONTROLS
+═══════════════════════════════════ */
+function setTileMode(mode, btn){
+  tileMode=mode;
+  document.querySelectorAll('.tmode').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setFormationCount(n, btn){
+  formationCount=n;
+  document.querySelectorAll('.fmb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function toggleOpt(opt, btn){
+  btn.classList.toggle('on');
+  const grid = document.getElementById('hexGrid');
+  if(opt==='grid')  grid.classList.toggle('hide-grid');
+  if(opt==='enemy') grid.classList.toggle('hide-enemy');
+  if(opt==='num')   grid.classList.toggle('hide-num');
+  if(opt==='art')   grid.classList.toggle('hide-art');
+}
+
+function applyToggleClasses(){
+  const grid = document.getElementById('hexGrid');
+  const togGrid  = document.getElementById('tog-grid');
+  const togEnemy = document.getElementById('tog-enemy');
+  const togNum   = document.getElementById('tog-num');
+  const togArt   = document.getElementById('tog-art');
+  if(!togGrid.classList.contains('on'))  grid.classList.add('hide-grid');
+  else grid.classList.remove('hide-grid');
+  if(!togEnemy.classList.contains('on')) grid.classList.add('hide-enemy');
+  else grid.classList.remove('hide-enemy');
+  if(!togNum.classList.contains('on'))   grid.classList.add('hide-num');
+  else grid.classList.remove('hide-num');
+  if(!togArt.classList.contains('on'))   grid.classList.add('hide-art');
+  else grid.classList.remove('hide-art');
+}
+
+function invertTiles(){
+  customTiles = customTiles.map(v=>{
+    if(v===1) return -1;
+    if(v===-1) return 1;
+    return v;
+  });
+  buildGrid();
+}
+
+function clearCurrentTeam(){
+  if(!confirm('현재 팀 배치를 초기화할까요?')) return;
+  teamData[currentTeam] = Array(45).fill(null).map(()=>({hero:null,artifact:null}));
+  buildGrid();
+}
+
+function clearAllUnits(){
+  if(!confirm('전체 팀 배치를 초기화할까요?')) return;
+  for(let t=1;t<=15;t++) teamData[t]=Array(45).fill(null).map(()=>({hero:null,artifact:null}));
+  buildGrid();
+}
+
+function checkDuplicates(){
+  const usedHeroes={};
+  for(let t=1;t<=15;t++){
+    teamData[t].forEach((td,idx)=>{
+      if(td&&td.hero){
+        if(!usedHeroes[td.hero]) usedHeroes[td.hero]=[];
+        usedHeroes[td.hero].push(t);
+      }
+    });
+  }
+  const dups = Object.entries(usedHeroes).filter(([h,ts])=>ts.length>1);
+  if(dups.length===0){
+    alert('중복 영웅 없음 ✅');
+  } else {
+    const msg = dups.map(([h,ts])=>{
+      const hero=HEROES.find(x=>x.id===h);
+      return `${hero?hero.name:h}: 팀 ${ts.join(', ')}`;
+    }).join('\n');
+    alert('중복 영웅 발견:\n'+msg);
+  }
+}
+
+function copyToClipboard(){
+  const data = {
+    arena: currentArena,
+    teams: teamData,
+    tiles: customTiles,
+    formationCount,
+  };
+  navigator.clipboard.writeText(JSON.stringify(data,null,2))
+    .then(()=>alert('클립보드에 복사되었습니다!'))
+    .catch(()=>alert('복사 실패'));
+}
+
+function savePNG(){
+  const gridEl = document.querySelector('.grid-area');
+  html2canvas(gridEl,{backgroundColor:'#0f1015',scale:2}).then(canvas=>{
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download=`roider_${currentArena.replace(/ /g,'_')}_team${currentTeam}.png`;
+    a.click();
+  });
+}
+
+/* ═══════════════════════════════════
+   SHARE MODAL
+═══════════════════════════════════ */
+function openShareModal(){
+  document.getElementById('shareArena').value = currentArena;
+  // 진형 수 버튼 동기화
+  document.querySelectorAll('#shareFormCount .fc-btn').forEach((b,i)=>{
+    b.classList.toggle('active', i+1===formationCount);
+  });
+  shareFormCount = formationCount;
+  document.getElementById('shareModal').classList.add('show');
+}
+
+function closeShareModal(){
+  document.getElementById('shareModal').classList.remove('show');
+}
+
+function setShareCount(n, btn){
+  shareFormCount=n;
+  document.querySelectorAll('#shareFormCount .fc-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════
+   FIREBASE INIT (editor_test)
+═══════════════════════════════════ */
+let _db = null;
+let _currentUser = null;
+
+(function initFirebase(){
+  if(typeof firebase === 'undefined') return;
+  try{
+    if(!firebase.apps.length){
+      firebase.initializeApp(window.firebaseConfig || {
+        apiKey:"AIzaSyCbqEcGsdSDBZs8PjiI05YRNEGupLf3nSc",
+        authDomain:"roider-guild-management.firebaseapp.com",
+        projectId:"roider-guild-management",
+        storageBucket:"roider-guild-management.firebasestorage.app",
+        messagingSenderId:"1012249034459",
+        appId:"1:1012249034459:web:ec0f821f29170446af96fe"
+      });
+    }
+    _db = firebase.firestore();
+    firebase.auth().onAuthStateChanged(function(user){
+      _currentUser = user;
+      if(user){
+        const nick = user.displayName || user.email || '멤버';
+        const authorInput = document.getElementById('shareAuthor');
+        if(authorInput && !authorInput.value) authorInput.value = nick;
+        const labelEl = document.getElementById('userLabel');
+        if(labelEl) labelEl.textContent = nick;
+      }
+    });
+  } catch(e){ console.warn('Firebase init error:', e); }
+})();
+
+async function submitShare(){
+  const title   = document.getElementById('shareTitle').value.trim();
+  const arena   = document.getElementById('shareArena').value;
+  const desc    = document.getElementById('shareDesc').value.trim();
+  const author  = document.getElementById('shareAuthor').value.trim() || (_currentUser?.displayName) || '익명';
+  if(!title){alert('제목을 입력해주세요');return;}
+
+  // tiles → 45개 배열 스냅샷
+  const tilesSnap = Array.isArray(customTiles) ? [...customTiles] : [];
+
+  // teamData → 직렬화 가능한 형태로 정리
+  let teamsSnap = {};
+  try{ teamsSnap = JSON.parse(JSON.stringify(teamData || {})); } catch(e){}
+
+  // formation_board.html 과 호환되는 데이터 구조
+  const shareData = {
+    title,
+    description: desc,
+    arena,
+    formationMode: shareFormCount,
+    tiles: tilesSnap,
+    teams: teamsSnap,
+    authorId:   _currentUser ? _currentUser.uid : 'anonymous',
+    authorName: author,
+    createdAt:  new Date(),
+    likes: 0,
+  };
+
+  if(_db){
+    try{
+      await _db.collection('shared_formations').add(shareData);
+      closeShareModal();
+      const go = confirm(`"${title}" 편성이 공유되었습니다! 🎉\n\n게시판으로 이동할까요?`);
+      if(go) window.location.href = 'formation_board.html';
+    } catch(e){
+      console.error(e);
+      alert('공유 실패: ' + e.message);
+    }
+  } else {
+    // Firebase 미연결 시 localStorage fallback
+    const stored = JSON.parse(localStorage.getItem('shared_formations')||'[]');
+    shareData.createdAt = new Date().toISOString();
+    shareData.id = Date.now().toString();
+    stored.unshift(shareData);
+    localStorage.setItem('shared_formations', JSON.stringify(stored.slice(0,50)));
+    closeShareModal();
+    alert(`"${title}" 편성이 게시판에 공유되었습니다! (오프라인 저장) 🎉`);
+  }
+}
+
+/* ═══════════════════════════════════
+   LOGIN
+═══════════════════════════════════ */
+function promptLogin(){
+  const nick=prompt('닉네임을 입력하세요');
+  if(nick){
+    localStorage.setItem('roider_user', nick);
+    document.getElementById('userLabel').textContent=nick;
+    document.getElementById('shareAuthor').value=nick;
+  }
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+function init(){
+  const user=localStorage.getItem('roider_user');
+  if(user){
+    document.getElementById('userLabel').textContent=user;
+  }
+  buildTeamTabs();
+  selectArena('Arena I');
+  renderLib();
+  renderArenaList();
+  document.getElementById('shareArena').value='Arena I';
+}
+
+init();
+</script>
+</body>
+</html>
