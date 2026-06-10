@@ -1,0 +1,876 @@
+/* [common_style.css] 모든 페이지 본문 공통 반응형 스타일 */
+
+/* 1. 기본 컨테이너 (고정 px 제거) */
+.wrap {
+  width: 95% !important;
+  max-width: 1000px !important; /* PC 최대 폭 제한 */
+  margin: 20px auto !important;
+  padding: 0 10px !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. 모바일에서 가로로 긴 표/달력 대응 (강제 스크롤) */
+.mobile-scroll-box {
+  width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 20px;
+}
+
+/* 3. 테이블형 레이아웃 (Flexbox 동적 비율) */
+.responsive-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.table-row, .table-header {
+  display: flex !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  align-items: center;
+}
+
+/* 4. 요소 간격 자동 조정 (모바일) */
+@media (max-width: 600px) {
+  h2 { font-size: 1.2rem !important; }
+  .table-row, .table-header { 
+    padding: 10px 5px !important; 
+    font-size: 12px !important;
+  }
+  /* 모바일에서 너무 좁은 요소는 숨기거나 줄바꿈 */
+  .hide-on-mobile { display: none !important; }
+}
+
+/* ========================================
+   [공통 컴포넌트 CSS - 모든 페이지 공유]
+   중복 인라인 CSS 제거 후 이곳에 통합
+   ======================================== */
+
+/* 계급 테두리 */
+.border-admin    { border: 3px solid #ff5252 !important; box-shadow: 0 0 10px rgba(255,82,82,0.4); }
+.border-manager  { border: 3px solid #f4c430 !important; box-shadow: 0 0 10px rgba(244,196,48,0.4); }
+.border-member   { border: 2px solid #444 !important; }
+.border-pending  { border: 2px solid #777 !important; }
+
+/* 역할 배지 */
+.role-badge         { font-size:10px; padding:2px 8px; border-radius:4px; font-weight:bold; margin-top:2px; display:inline-block; }
+.role-badge.role-ADMIN   { background:#ff5252; color:#fff; }
+.role-badge.role-MANAGER { background:#f4c430; color:#000; }
+.role-badge.role-MEMBER  { background:#444;    color:#fff; }
+.role-badge.role-PENDING { background:#666;    color:#fff; }
+
+/* 로딩 오버레이 */
+#loadingOverlay {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:#0f1015; z-index:9999;
+  display:flex; justify-content:center; align-items:center;
+  color:var(--accent); font-size:1.2rem; font-weight:bold;
+}
+
+/* 앱 컨테이너 (헤더 아래 전체 영역) */
+.app-container { display:flex; padding-top:60px; min-height:100vh; }
+
+/* 사이드바 - PC */
+nav.side-nav {
+  width:250px; background:#161b22;
+  border-right:1px solid #2a3242;
+  height:calc(100vh - 60px);
+  position:sticky; top:60px;
+  z-index:1000; flex-shrink:0;
+  overflow-y:auto;
+}
+
+/* 사이드바 유저 정보 */
+.sidebar-user-info { position:relative; }
+.sidebar-user-info img {
+  width:70px; height:70px; border-radius:50%;
+  margin-bottom:12px; object-fit:cover; box-sizing:border-box;
+}
+.user-name-box { display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:15px; }
+.u-name { font-size:17px; font-weight:bold; color:#fff; }
+
+/* 네비게이션 링크 */
+.nav-container { display:flex; flex-direction:column; }
+.nav-link {
+  font-size:15px; padding:14px 25px; color:#ccc;
+  text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.03);
+  transition:0.2s;
+}
+.nav-link:hover { background:rgba(255,255,255,0.05); color:#fff; }
+.nav-link.active { color:#f4c430; background:rgba(244,196,48,0.1); font-weight:bold; }
+
+/* 메인 콘텐츠 */
+.main-content { flex:1; padding:30px; box-sizing:border-box; }
+
+/* 모달 공통 */
+.modal {
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.85); z-index:3000;
+  justify-content:center; align-items:center;
+}
+.modal-content {
+  background:#1c1f2a; width:92%; max-width:480px;
+  border-radius:20px; border:2px solid var(--accent);
+  padding:25px; position:relative; max-height:90vh; overflow-y:auto;
+}
+.modal-header { text-align:center; font-size:20px; font-weight:bold; color:var(--accent); margin-bottom:20px; }
+.modal-btn {
+  width:100%; background:var(--accent); color:#000;
+  padding:14px; border:none; border-radius:12px;
+  font-weight:bold; font-size:16px; cursor:pointer;
+  margin-top:15px;
+}
+
+/* 모바일 반응형 */
+@media (max-width:850px) {
+  nav.side-nav {
+    position:fixed; top:0; left:-280px; width:280px;
+    height:100%; z-index:2100;
+    box-shadow:5px 0 15px rgba(0,0,0,0.5);
+    transition:left 0.3s ease;
+  }
+  nav.side-nav.active { left:0; }
+  .app-container { display:block; }
+  .main-content { padding:20px 15px; }
+}
+
+@media (max-width:600px) {
+  .main-content { padding:15px 10px; }
+}
+
+/* ═══════════════════════════════════════════
+   [TOAST 알림 시스템]
+   showToast(msg, type, duration) 로 호출
+   type: 'success' | 'error' | 'info' | 'warning'
+   ═══════════════════════════════════════════ */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  width: 90%;
+  max-width: 420px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  width: 100%;
+  box-sizing: border-box;
+  animation: toastIn 0.35s cubic-bezier(0.21,1.02,0.73,1) forwards;
+  letter-spacing: -0.2px;
+  line-height: 1.4;
+}
+.toast.hiding {
+  animation: toastOut 0.3s ease forwards;
+}
+
+.toast-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.toast-success {
+  background: linear-gradient(135deg, rgba(0,200,100,0.18), rgba(0,230,118,0.10));
+  border: 1px solid rgba(0,230,118,0.35);
+  color: #00e676;
+}
+.toast-error {
+  background: linear-gradient(135deg, rgba(255,82,82,0.18), rgba(255,50,50,0.10));
+  border: 1px solid rgba(255,82,82,0.35);
+  color: #ff6b6b;
+}
+.toast-info {
+  background: linear-gradient(135deg, rgba(77,171,247,0.18), rgba(77,171,247,0.10));
+  border: 1px solid rgba(77,171,247,0.35);
+  color: #4dabf7;
+}
+.toast-warning {
+  background: linear-gradient(135deg, rgba(244,196,48,0.18), rgba(244,196,48,0.10));
+  border: 1px solid rgba(244,196,48,0.35);
+  color: #f4c430;
+}
+
+@keyframes toastIn {
+  from { opacity:0; transform:translateY(20px) scale(0.94); }
+  to   { opacity:1; transform:translateY(0)    scale(1);    }
+}
+@keyframes toastOut {
+  from { opacity:1; transform:translateY(0)    scale(1);    }
+  to   { opacity:0; transform:translateY(-10px) scale(0.94); }
+}
+
+/* ═══════════════════════════════════════════
+   [커스텀 확인 다이얼로그]  (confirm 대체)
+   showConfirm(msg) → Promise<boolean>
+   ═══════════════════════════════════════════ */
+#confirm-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  z-index: 99998;
+  justify-content: center;
+  align-items: center;
+}
+#confirm-overlay.active { display: flex; }
+
+#confirm-box {
+  background: #1c1f2a;
+  border: 1.5px solid #2a3242;
+  border-radius: 18px;
+  padding: 28px 28px 22px;
+  width: 88%;
+  max-width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: toastIn 0.28s ease forwards;
+}
+#confirm-icon  { font-size: 32px; text-align: center; margin-bottom: 12px; }
+#confirm-msg   { font-size: 15px; color: #e6e6e6; text-align: center;
+                 line-height: 1.6; margin-bottom: 22px; word-break: keep-all; }
+.confirm-btns  { display: flex; gap: 10px; }
+.confirm-btns button {
+  flex: 1; padding: 13px 0; border-radius: 10px;
+  font-size: 14px; font-weight: bold; cursor: pointer; border: none;
+  transition: opacity 0.15s;
+}
+.confirm-btns button:active { opacity: 0.75; }
+#confirm-ok   { background: #f4c430; color: #000; }
+#confirm-ok.danger { background: #ff5252; color: #fff; }
+#confirm-cancel { background: rgba(255,255,255,0.08); color: #ccc;
+                  border: 1px solid rgba(255,255,255,0.12) !important; }
+
+/* ═══════════════════════════════════════════
+   [스켈레톤 로더]
+   ═══════════════════════════════════════════ */
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.skeleton-avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.skeleton-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.skeleton-line  { height: 12px; border-radius: 6px; }
+.skeleton-line.short { width: 45%; }
+.skeleton-line.long  { width: 75%; }
+.skeleton-badge {
+  width: 52px; height: 22px; border-radius: 4px; flex-shrink: 0;
+}
+
+/* member용 스켈레톤 (3열) */
+.skeleton-member-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.skeleton-member-info { flex: 2; display: flex; align-items: center; gap: 12px; }
+.skeleton-member-mid  { flex: 1; display: flex; justify-content: center; }
+.skeleton-member-end  { flex: 1; display: flex; justify-content: center; }
+
+/* ═══════════════════════════════════════════
+   [로딩 오버레이 개선 - 스피너 포함]
+   ═══════════════════════════════════════════ */
+#loadingOverlay {
+  flex-direction: column;
+  gap: 18px;
+}
+.loading-spinner {
+  width: 42px; height: 42px;
+  border: 3px solid rgba(244,196,48,0.15);
+  border-top-color: #f4c430;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-text {
+  font-size: 13px;
+  color: rgba(244,196,48,0.7);
+  letter-spacing: 1px;
+}
+
+/* 버튼 로딩 상태 */
+.btn-loading {
+  position: relative;
+  pointer-events: none !important;
+  opacity: 0.65 !important;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* pending 페이지 실시간 뱃지 */
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #00e676;
+  background: rgba(0,230,118,0.08);
+  border: 1px solid rgba(0,230,118,0.2);
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin-top: 18px;
+}
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #00e676;
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* 모바일 달력 버튼 터치 영역 확대 */
+.btn-cell-att {
+  min-height: 28px !important;
+  padding: 6px 0 !important;
+  font-size: 11px !important;
+}
+@media (max-width: 600px) {
+  .btn-cell-att { padding: 8px 0 !important; font-size: 12px !important; }
+}
+
+/* ── 2순위 UX 개선: 본인 행 하이라이트 / 공지 카드 / 캘린더 ─────── */
+/* 터치 피드백 공통 */
+button, .nav-link, .action-link {
+  -webkit-tap-highlight-color: rgba(244,196,48,0.15);
+}
+
+/* 공지 URL 링크 스타일 */
+.notice-card a[target="_blank"] {
+  color: #7db3ff;
+  text-decoration: underline;
+  word-break: break-all;
+}
+.notice-card a[target="_blank"]:hover { color: #a0c4ff; }
+
+/* 주간 랭킹 본인 행 */
+tr.my-row td { background: rgba(244, 196, 48, 0.07) !important; }
+tr.my-row td:first-child { border-left: 3px solid #f4c430; }
+.my-nickname-badge {
+  display: inline-block; background: rgba(244,196,48,0.2);
+  color: #f4c430; font-size: 10px; padding: 1px 6px;
+  border-radius: 10px; margin-left: 6px; font-weight: bold;
+  vertical-align: middle;
+}
+
+/* ── 신규 공지 뱃지 ─────────────────────────────────── */
+.nav-link { position: relative; }
+.notice-badge {
+  position: absolute; top: 8px; right: 12px;
+  background: #ff5252; color: #fff;
+  font-size: 10px; font-weight: bold;
+  padding: 1px 6px; border-radius: 10px;
+  min-width: 18px; text-align: center;
+  line-height: 16px; pointer-events: none;
+  animation: badgePop 0.3s ease;
+}
+@keyframes badgePop {
+  0%   { transform: scale(0); }
+  70%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+/* 대시보드 카드 뱃지 */
+.menu-card { position: relative; overflow: visible; }
+.card-notice-badge {
+  position: absolute; top: -8px; right: -8px;
+  background: #ff5252; color: #fff;
+  font-size: 11px; font-weight: bold;
+  padding: 3px 8px; border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(255,82,82,0.5);
+  animation: badgePop 0.3s ease;
+  white-space: nowrap;
+}
+/* ── 스와이프 힌트 ─────────────────────────────────── */
+#swipe-hint {
+  position: fixed; left: 0; top: 50%; transform: translateY(-50%);
+  width: 18px; background: rgba(244,196,48,0.7);
+  border-radius: 0 8px 8px 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.4s, width 0.3s;
+  pointer-events: none;
+}
+#swipe-hint.visible { opacity: 1; width: 24px; }
+#swipe-hint .swipe-hint-arrow {
+  color: #111; font-size: 18px; font-weight: bold; line-height: 48px;
+}
+/* 사이드바 슬라이드 트랜지션 개선 */
+nav.side-nav {
+  transition: left 0.28s cubic-bezier(0.4,0,0.2,1) !important;
+  will-change: left;
+}
+
+/* ══════════════════════════════════════════════════════
+   [반응형 전역 기준 - 최종 정규화]
+   브레이크포인트: 850px(사이드바) / 600px(모바일) / 400px(초소형)
+   ══════════════════════════════════════════════════════ */
+
+/* ① 이미지 반응형 기본값 */
+img { max-width: 100%; height: auto; }
+
+/* ② 텍스트 삐져나옴 방지 - 전역 */
+body { word-break: keep-all; overflow-wrap: break-word; }
+p, span, div, td, th, li, a { overflow-wrap: break-word; }
+
+/* ③ input/textarea iOS 자동줌 방지 (font-size >= 16px) */
+input, textarea, select {
+  font-size: 16px !important;
+  /* iOS Safari: font-size < 16px이면 focus 시 자동 줌 발생 */
+}
+
+/* ④ 버튼 최소 터치 영역 (WCAG 2.1 AA: 44×44px) */
+button, .btn-write, .btn-action, .action-btn, .modal-btn,
+.btn-calc, .btn-finalize, .btn-guide-open, .logout-btn {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* ⑤ 표 가로 스크롤 공통 래퍼 */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+}
+
+/* ⑥ 초소형 디바이스 (400px 이하) */
+@media (max-width: 400px) {
+  .main-content { padding: 12px 8px !important; }
+  h2 { font-size: 1.1rem !important; }
+  .nav-link { font-size: 14px !important; padding: 12px 20px !important; }
+  .modal-content { padding: 18px !important; }
+}
+
+/* ⑦ 안전 영역 (노치/홈 인디케이터 대응) */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .app-container {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #toast-container {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ─── weekly.html 스켈레톤 행 ─── */
+.skeleton-tr td { padding: 10px 8px; }
+.skeleton-tr { pointer-events: none; }
+
+/* ─── notice.html 스켈레톤 카드 ─── */
+.skeleton-notice-card {
+  background: linear-gradient(180deg, #1c1f2a, #191c27);
+  border: 1px solid #2a3242;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
+/* ─── loading-text 보완 ─── */
+.loading-text {
+  margin-top: 16px;
+  color: #f4c430;
+  font-size: 13px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+@keyframes spinLoader {
+  to { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   인앱 알림 센터 (공지 신규 등록 시 팝업)
+   ───────────────────────────────────────────────────────────── */
+#in-app-notification-center {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  z-index: 99998;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: min(380px, calc(100vw - 32px));
+}
+.in-app-notif {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, #1e2a3a 0%, #161e2c 100%);
+  border: 1px solid rgba(244, 196, 48, 0.45);
+  border-radius: 14px;
+  padding: 14px 14px 14px 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(244,196,48,0.1);
+  cursor: pointer;
+  pointer-events: all;
+  opacity: 0;
+  transform: translateX(60px) scale(0.92);
+  transition: opacity 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+.in-app-notif::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #f4c430, #e8a800);
+  border-radius: 14px 0 0 14px;
+}
+.in-app-notif.ian-show {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+.in-app-notif.ian-hide {
+  opacity: 0;
+  transform: translateX(60px) scale(0.85);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.ian-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.ian-body { flex: 1; min-width: 0; }
+.ian-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f4c430;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ian-text {
+  font-size: 12px;
+  color: #aab;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: keep-all;
+}
+.ian-close {
+  position: absolute;
+  top: 8px; right: 10px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.ian-close:hover { color: #ff5252; }
+.in-app-notif:hover {
+  border-color: rgba(244, 196, 48, 0.7);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(244,196,48,0.25);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   푸시 알림 권한 요청 배너
+   ───────────────────────────────────────────────────────────── */
+#push-permission-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #1a2435, #131b28);
+  border: 1px solid rgba(244, 196, 48, 0.3);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 0 0 18px 0;
+  flex-wrap: wrap;
+  gap: 10px;
+  overflow: hidden;
+  max-height: 200px;
+  transition: max-height 0.4s ease, opacity 0.4s ease;
+}
+.ppb-icon  { font-size: 24px; flex-shrink: 0; }
+.ppb-text  { flex: 1; min-width: 180px; }
+.ppb-title { font-size: 14px; font-weight: 700; color: #f4c430; margin-bottom: 2px; }
+.ppb-desc  { font-size: 12px; color: #99a; line-height: 1.5; }
+.ppb-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-ppb-allow {
+  background: #f4c430;
+  color: #1a1a1a;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-ppb-allow:hover   { opacity: 0.88; transform: scale(1.03); }
+.btn-ppb-allow:active  { transform: scale(0.97); }
+.btn-ppb-later {
+  background: transparent;
+  color: #666;
+  border: 1px solid #333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-ppb-later:hover { color: #999; border-color: #555; }
+
+/* 알림 설정 토글 버튼 (공지 페이지 헤더) */
+.btn-push-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(244, 196, 48, 0.08);
+  border: 1px solid rgba(244, 196, 48, 0.25);
+  color: #f4c430;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-push-toggle:hover {
+  background: rgba(244, 196, 48, 0.15);
+  border-color: rgba(244, 196, 48, 0.5);
+}
+.btn-push-toggle.active {
+  background: rgba(244, 196, 48, 0.18);
+  border-color: #f4c430;
+}
+.push-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #666;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.push-status-dot.on  { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.6); }
+.push-status-dot.off { background: #666; }
+
+@media (max-width: 600px) {
+  #in-app-notification-center {
+    top: 64px; right: 10px; left: 10px; max-width: 100%;
+  }
+  .in-app-notif { padding: 12px 12px 12px 14px; }
+  .ian-title { font-size: 12px; }
+  .ian-text  { font-size: 11px; }
+  #push-permission-banner { padding: 12px; }
+}
+
+
+/* ── 공지 알림 클릭 하이라이트 (SW postMessage NOTICE_CLICK 연동) ── */
+.notice-highlight {
+  animation: noticeHighlight 3s ease-out forwards;
+  border-radius: 12px;
+  position: relative;
+  z-index: 1;
+}
+@keyframes noticeHighlight {
+  0%   { box-shadow: 0 0 0 0 rgba(244, 196, 48, 0.8); background: rgba(244, 196, 48, 0.15); }
+  30%  { box-shadow: 0 0 0 8px rgba(244, 196, 48, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 196, 48, 0); background: transparent; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   [RESPONSIVE v3.2] 전체 UI 반응형 최적화 패치
+   브레이크포인트: 1200px(와이드) / 850px(사이드바) / 600px(모바일) / 400px(초소형)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 0. CSS 변수 (동적 폰트/간격) ── */
+:root {
+  --fs-xs:   clamp(9px,  1.8vw, 11px);
+  --fs-sm:   clamp(11px, 2.2vw, 13px);
+  --fs-base: clamp(13px, 2.5vw, 15px);
+  --fs-lg:   clamp(15px, 3vw,   18px);
+  --fs-xl:   clamp(17px, 3.5vw, 22px);
+  --sp-xs:  clamp(4px,  1vw,  8px);
+  --sp-sm:  clamp(8px,  2vw,  14px);
+  --sp-md:  clamp(14px, 3vw,  20px);
+  --sp-lg:  clamp(18px, 4vw,  30px);
+  --radius-sm: clamp(6px,  1.5vw, 10px);
+  --radius-md: clamp(10px, 2vw,  16px);
+  --radius-lg: clamp(14px, 3vw,  20px);
+}
+
+/* ── 1. 헤더 반응형 ── */
+header, .top-header {
+  height: clamp(48px, 8vw, 60px) !important;
+  padding: 0 clamp(10px, 3vw, 24px) !important;
+}
+.header-left .logo {
+  font-size: clamp(14px, 3.5vw, 20px) !important;
+}
+.app-container {
+  padding-top: clamp(48px, 8vw, 60px) !important;
+}
+
+/* ── 2. 사이드바 반응형 ── */
+nav.side-nav {
+  width: clamp(220px, 25vw, 260px) !important;
+  height: calc(100vh - clamp(48px, 8vw, 60px)) !important;
+  top: clamp(48px, 8vw, 60px) !important;
+}
+.sidebar-user-info img {
+  width: clamp(54px, 8vw, 72px) !important;
+  height: clamp(54px, 8vw, 72px) !important;
+}
+.u-name { font-size: clamp(14px, 2.5vw, 17px) !important; }
+.nav-link {
+  font-size: clamp(13px, 2.2vw, 15px) !important;
+  padding: clamp(10px, 2vw, 14px) clamp(16px, 3vw, 25px) !important;
+}
+
+/* ── 3. 메인 콘텐츠 반응형 ── */
+.main-content {
+  padding: clamp(14px, 3vw, 30px) clamp(12px, 3vw, 30px) !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+}
+
+/* ── 4. 모달 반응형 ── */
+.modal-content {
+  width: clamp(280px, 92vw, 480px) !important;
+  padding: clamp(16px, 4vw, 28px) !important;
+  border-radius: var(--radius-lg) !important;
+}
+.guide-modal-wide {
+  max-width: clamp(300px, 94vw, 540px) !important;
+  max-height: 90vh !important;
+}
+
+/* ── 5. 버튼 반응형 ── */
+.modal-btn, .btn-calc, .btn-finalize, .btn-write, .btn-action {
+  font-size: clamp(13px, 2.5vw, 16px) !important;
+  padding: clamp(10px, 2.5vw, 14px) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* ── 6. 테이블 반응형 ── */
+.admin-table, .weekly-table, .member-table {
+  font-size: clamp(10px, 2vw, 13px) !important;
+}
+.admin-table th, .admin-table td,
+.weekly-table th, .weekly-table td {
+  padding: clamp(6px, 1.5vw, 10px) clamp(6px, 1.5vw, 10px) !important;
+}
+
+/* ── 7. 카드 컴포넌트 반응형 ── */
+.notice-card, .menu-card, .history-card {
+  border-radius: var(--radius-md) !important;
+  padding: clamp(14px, 3vw, 20px) !important;
+}
+
+/* ── 8. 와이드 스크린 (1200px+): 최대 너비 제한 ── */
+@media (min-width: 1200px) {
+  .main-content {
+    max-width: 960px;
+  }
+}
+
+/* ── 9. 태블릿 (601px ~ 850px) ── */
+@media (min-width: 601px) and (max-width: 850px) {
+  .main-content { padding: 18px 16px !important; }
+  .modal-content { max-width: min(420px, 92vw) !important; }
+}
+
+/* ── 10. 모바일 (≤600px) ── */
+@media (max-width: 600px) {
+  nav.side-nav { width: min(280px, 85vw) !important; }
+  .main-content { padding: 14px 10px !important; }
+  h2 { font-size: clamp(15px, 4.5vw, 19px) !important; }
+  .modal-content { padding: 16px !important; }
+
+  /* 전체 폰트 모바일 조정 */
+  body { font-size: 14px; }
+  .nav-link { font-size: 14px !important; }
+
+  /* 테이블 셀 최소화 */
+  td, th { font-size: 11px !important; padding: 6px 5px !important; }
+
+  /* 버튼 터치 영역 확보 */
+  button, .btn-cell-att { min-height: 40px !important; }
+}
+
+/* ── 11. 초소형 (≤400px) ── */
+@media (max-width: 400px) {
+  .main-content { padding: 10px 8px !important; }
+  h2 { font-size: 15px !important; }
+  .modal-content { padding: 14px !important; }
+  .nav-link { padding: 11px 16px !important; }
+}
+
+/* ── 12. 가로모드 모바일 (landscape) ── */
+@media (max-height: 500px) and (orientation: landscape) {
+  nav.side-nav { overflow-y: auto; }
+  .modal-content { max-height: 85vh; overflow-y: auto; }
+  header, .top-header { height: 44px !important; }
+  .app-container { padding-top: 44px !important; }
+}
+
+/* ── 13. 텍스트 overflow 방지 전역 ── */
+* { box-sizing: border-box; }
+.main-content * { max-width: 100%; }
+pre, code { white-space: pre-wrap; word-break: break-all; }
+
+/* ── 14. 이미지/미디어 반응형 ── */
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
+}

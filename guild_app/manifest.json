@@ -1,0 +1,29 @@
+{
+  "name": "ROIDER GUILD APP",
+  "short_name": "ROIDER",
+  "start_url": "/main.html",
+  "display": "standalone",
+  "background_color": "#0f1015",
+  "theme_color": "#1b2333",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "orientation": "portrait",
+  "lang": "ko",
+  "categories": [
+    "games",
+    "utilities"
+  ],
+  "gcm_sender_id": "1012249034459"
+}

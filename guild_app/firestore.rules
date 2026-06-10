@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── [공통 함수] ────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isManager() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "manager"];
+    }
+
+    // admin 또는 staff(운영진) 여부
+    function isStaff() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "staff"];
+    }
+
+    // 변경하려는 필드 목록 추출 헬퍼
+    function affectedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ─── USERS ──────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid;
+
+      // ⚠️ [보안 패치] 본인은 role·uid·email 필드 직접 변경 불가
+      // → role 변경은 반드시 관리자(isAdmin)만 가능
+      allow update: if request.auth != null && (
+        // 본인: 안전한 필드(nickname, customPhotoURL, photoUpdatedAt 등)만 수정 가능
+        (
+          request.auth.uid == uid
+          && !affectedKeys().hasAny(['role', 'uid', 'email'])
+        )
+        ||
+        // 관리자: 모든 필드 수정 가능 (role 변경 포함)
+        isAdmin()
+      );
+
+      allow delete: if false;
+    }
+
+    // ─── NOTICE ─────────────────────────────────────────────────
+    match /notice/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if isManager();
+
+      match /{subCollection=**} {
+        allow read:  if request.auth != null;
+        allow write: if isManager();
+      }
+    }
+
+    // ─── FCM 토큰 (푸시 알림용) ──────────────────────────────────
+    match /fcmTokens/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── 푸시 발송 로그 ──────────────────────────────────────────
+    match /pushLogs/{logId} {
+      allow read:  if isAdmin();
+      // 클라이언트 직접 쓰기 금지 — Cloud Functions Admin SDK만 허용
+      allow write: if false;
+    }
+
+    // ─── WEEKLY CONFIG ───────────────────────────────────────────
+    match /weekly_config/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if isManager();
+    }
+
+    // ─── WEEKLY RESULTS ──────────────────────────────────────────
+    match /weekly_results/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if isManager();
+    }
+
+    // ─── STRATEGY ────────────────────────────────────────────────
+    match /guild_strategy/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if isManager();
+    }
+
+    // ─── ATTENDANCE ──────────────────────────────────────────────
+    match /attendance_logs/{uid} {
+      allow read: if request.auth != null;
+
+      match /days/{dayId} {
+        allow read:  if request.auth != null;
+        allow write: if request.auth != null && (request.auth.uid == uid || isManager());
+      }
+
+      match /{allPaths=**} {
+        allow read:  if request.auth != null;
+        allow write: if request.auth != null && (request.auth.uid == uid || isManager());
+      }
+    }
+
+
+        // ─── INFOGRAPHIC POSTS (Discord Bot Admin SDK로만 씀) ──────
+    match /infographic_posts/{postId} {
+      allow read: if request.auth != null;
+      allow write: if false;   // 봇(Admin SDK)만 씀 — 클라이언트 쓰기 불가
+    }
+
+  }
+}
+
+// firestore.rules
+match /weekly_history/{logId} {
+  allow read: if isManager();
+  allow create: if isManager();
+}

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ROIDER 길드 - 닉네임 설정</title>
+
+  <link rel="stylesheet" href="header_standard.css">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="i18n_added.js" defer></script>
+
+  <style>
+    body { 
+      margin: 0; 
+      background: radial-gradient(circle at top, #1b2333, #0f1015 60%); 
+      color: #eee; 
+      display: flex; 
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh; /* ✅ 모바일 주소창 대응 */
+      font-family: system-ui, -apple-system, sans-serif; 
+    }
+
+    /* 중앙 정렬 컨테이너 */
+    .container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card { 
+      background: #1c1f2a; 
+      padding: 40px 30px; 
+      border-radius: 20px; 
+      text-align: center; 
+      width: 100%;
+      max-width: 360px; 
+      border: 1px solid #2a3242;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+
+    h2 { 
+      color: #f4c430; 
+      margin-top: 0; 
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #aaa;
+      font-size: 14px;
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 16px;
+      color: #f4c430;
+      margin-bottom: 8px;
+      font-weight: 600;
+      padding-left: 4px;
+    }
+
+    input { 
+      width: 100%; 
+      padding: 14px; 
+      border-radius: 10px; 
+      border: 1px solid #333; 
+      background: #0f1015;
+      color: #fff;
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #f4c430;
+    }
+
+    button.btn-save { 
+      width: 100%;
+      padding: 15px;
+      border-radius: 10px;
+      border: none;
+      background: #f4c430; 
+      color: #111;
+      font-weight: 800; 
+      font-size: 16px;
+      cursor: pointer; 
+      transition: transform 0.1s, background 0.2s;
+    }
+
+    button.btn-save:hover {
+      background: #e5b82d;
+    }
+
+    button.btn-save:active {
+      transform: scale(0.98);
+    }
+
+    /* 텍스트 줄바꿈 - 긴 닉네임/URL 삐져나옴 방지 */
+    .notice-card, .user-card, .info-text, td, th { word-break: keep-all; overflow-wrap: break-word; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo" id="appTitle">ROIDER GUILD</div>
+    <div class="user-box">
+      <img id="userPhoto" src="" alt="profile" style="width:32px; height:32px; border-radius:50%;" />
+      <span id="userName">Loading...</span>
+      <button id="langToggleBtn" class="logout" onclick="toggleLanguage()">🌐 EN</button>
+      <button class="logout" onclick="logout()" data-i18n="btn_logout">로그아웃</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2 data-i18n="login_nick_prompt">닉네임 설정</h2>
+      <p>길드 시스템 이용을 위해<br>게임 내 닉네임을 등록해주세요.</p>
+      
+      <div class="input-group">
+        <label>In-game Nickname</label>
+        <input type="text" id="nicknameInput" data-i18n-placeholder="login_nick_placeholder" placeholder="게임 닉네임 입력" />
+      </div>
+
+      <button class="btn-save" onclick="saveNickname()" data-i18n="login_nick_btn">저장 및 신청</button>
+    </div>
+  </div>
+
+  <script>
+    // 인증 상태 감시
+    auth.onAuthStateChanged((user) => {
+      const ol = document.getElementById('loadingOverlay');
+      if (ol) ol.style.display = 'none';
+      if (!user) return location.replace("login.html");
+      
+      // 상단 프로필 이미지 업데이트
+      const userPhotoEl = document.getElementById("userPhoto");
+      // customPhotoURL 우선 (profile_select에서 설정한 커스텀 사진)
+      if (userPhotoEl) {
+        const photoSrc = user.customPhotoURL || user.photoURL;
+        if (photoSrc) userPhotoEl.src = photoSrc;
+      }
+      document.getElementById("userName").textContent = user.displayName || "User";
+    });
+
+    // 닉네임 저장 함수
+    async function saveNickname() {
+      const user = auth.currentUser;
+      const nickname = document.getElementById("nicknameInput").value.trim();
+      const btn = document.querySelector('.btn-save');
+      
+      if (!nickname) {
+        const msg = currentLang === 'ko' ? "닉네임을 입력하세요." : "Please enter your nickname.";
+        showToast(msg, 'warning');
+        return;
+      }
+
+      try {
+        // ✅ 로컬 스토리지 저장 (즉시 반영용)
+        if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; btn.style.opacity = '0.6'; }
+        localStorage.setItem("nickname", nickname);
+
+        // ✅ Firestore 저장 (role: pending으로 설정하여 승인 대기 상태로 만듦)
+        // merge: true를 통해 기존 데이터(구글 프로필 등)를 보존하며 닉네임만 덮어씀
+        // ── 국가 감지 (4-provider 폴백, 실패해도 가입 진행) ──
+        let geoInfo = {};
+        const GEO_PROVIDERS_NICK = [
+          { url: 'https://ipapi.co/json/',             parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone }) },
+          { url: 'https://freeipapi.com/api/json/',    parse: d => ({ code: d.countryCode,  city: d.cityName, tz: d.timeZone }) },
+          { url: 'https://ipwho.is/',                  parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone?.id }) },
+          { url: 'https://get.geojs.io/v1/ip/geo.json', parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone }) }
+        ];
+        for (const p of GEO_PROVIDERS_NICK) {
+          try {
+            const r = await fetch(p.url, { signal: AbortSignal.timeout(4000) });
+            if (!r.ok) continue;
+            const d = await r.json();
+            const info = p.parse(d);
+            if (info.code && /^[A-Z]{2}$/i.test(info.code)) {
+              geoInfo = { code: info.code.toUpperCase(), city: info.city || null, tz: info.tz || null };
+              break;
+            }
+          } catch(e) { /* 다음 provider 시도 */ }
+        }
+
+        await db.collection("users").doc(user.uid).set({
+          nickname: nickname,
+          role: "pending",
+          email: user.email,
+          uid: user.uid,
+          ...(geoInfo.code && {
+            country     : geoInfo.code,
+            geoCity     : geoInfo.city     || null,
+            geoTimezone : geoInfo.tz       || null,
+            geoProvider : 'nickname-signup',
+            geoUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        showToast('닉네임이 저장되었습니다! ✅', 'success', 2000);
+        setTimeout(() => location.replace("pending.html"), 1200);
+      } catch (error) {
+        if (btn) { btn.disabled = false; btn.textContent = '저장 및 신청'; btn.style.opacity = ''; }
+        showToast('저장에 실패했습니다: ' + error.message, 'error');
+        console.error('nickname save error:', error);
+      }
+    }
+
+    // 초기 언어 적용
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof applyLanguage === "function") applyLanguage();
+    });
+  </script>
+
+
+  <!-- 로딩 오버레이 -->
+  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
+    <div class="loading-spinner"></div>
+    <span class="loading-text" style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">ROIDER GUILD</span>
+  </div>
+</body>
+</html>

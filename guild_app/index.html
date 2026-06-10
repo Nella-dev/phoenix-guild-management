@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AFK Journey: Homestead - ROIDER Guild</title>
+
+  <!-- ✅ Firebase SDK v10.8.0 (전체 통일) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- ✅ 공통 Firebase 설정 (firebase_key.js → firebase_config.js 순서 유지) -->
+  <script src="firebase_key.js"></script>
+  <script>window.isLoginPage = true;</script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+
+  <style>
+        body {
+      background: #0f1015;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      min-height: 100dvh; /* ✅ 모바일 주소창 대응 */
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #1c1f2a;
+      padding: 40px;
+      border-radius: 16px;
+      text-align: center;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      border: 1px solid #2a3242;
+    }
+    h2 { margin-bottom: 8px; color: #f4c430; }
+    p { color: #8892b0; margin-bottom: 24px; }
+    .google-btn { transition: transform 0.2s; cursor: pointer; }
+    .google-btn:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>AFK Journey: Homestead</h2>
+    <p>ROIDER Guild Management</p>
+    <img
+      src="https://developers.google.com/identity/images/btn_google_signin_dark_normal_web.png"
+      onclick="login()"
+      class="google-btn"
+      alt="Sign in with Google"
+    >
+    <div id="loginLoading" style="display:none; margin-top:16px; color:#8892b0; font-size:13px;">
+      ⏳ 로그인 처리 중...
+    </div>
+  </div>
+
+    <script>
+    // ✅ signInWithPopup 단일 방식 (모바일/PC 공통, 루프 방지)
+    // - signInWithRedirect는 authDomain 불일치 시 루프 발생 가능성 있음
+    // - 현대 모바일 브라우저(Chrome, Safari)는 팝업 지원
+
+    async function login() {
+      const btn = document.querySelector('.google-btn');
+      const loadingEl = document.getElementById('loginLoading');
+      if (btn) {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+        btn.style.filter = 'grayscale(0.4)';
+      }
+      if (loadingEl) loadingEl.style.display = 'block';
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+
+      try {
+        console.log("[Login] signInWithPopup 시도...");
+        await auth.signInWithPopup(provider);
+        // ✅ 성공 후 firebase_config.js의 onAuthStateChanged가 페이지 이동 처리
+      } catch (error) {
+        console.error("[Login] Error:", error.code, error.message);
+
+        if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.style.filter = ''; }
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        if (error.code === 'auth/popup-blocked') {
+          // 팝업 차단 → redirect 폴백
+          console.warn("[Login] 팝업 차단됨 → redirect 방식으로 전환");
+          if (typeof showToast === 'function') {
+            showToast('팝업이 차단되었습니다. 잠시 후 리다이렉트 방식으로 재시도합니다.', 'warning');
+          }
+          setTimeout(async () => {
+            try {
+              await auth.signInWithRedirect(provider);
+            } catch(e) {
+              if (typeof showToast === 'function') showToast('로그인 실패. 잠시 후 다시 시도해 주세요.', 'error');
+            }
+          }, 1500);
+        } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+          // 사용자가 팝업 닫음 → 조용히 처리
+          console.log("[Login] 사용자가 팝업 닫음");
+        } else {
+          if (typeof showToast === 'function') {
+            showToast('로그인 오류: ' + (error.message || error.code), 'error');
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+  <meta charset="UTF-8" />
+  <meta name="description" content="ROIDER 길드 관리자 - 권한 관리 및 멤버 승인">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ROIDER GUILD - Admin</title>
+  
+  <link rel="stylesheet" href="header_standard.css">
+  <link rel="stylesheet" href="common_style.css">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
+
+  <style>
+    body { margin:0; background:radial-gradient(circle at top,#1b2333,#0f1015 60%); color:#e6e6e6; min-height:100vh; font-family:'Pretendard',sans-serif; overflow-x:hidden; }
+
+    /* ── 헤더 ── */
+    header { display:flex!important; justify-content:space-between!important; align-items:center!important; padding:10px 15px!important; background:#121721!important; border-bottom:1px solid #2a3242!important; min-height:60px!important; box-sizing:border-box!important; position:fixed!important; top:0!important; width:100%; z-index:2000!important; box-shadow:0 2px 10px rgba(0,0,0,.3)!important; }
+    .header-left { display:flex!important; align-items:center!important; gap:12px!important; }
+    .menu-trigger { display:none; font-size:24px; color:#f4c430; background:none; border:none; cursor:pointer; padding:0; line-height:1; }
+
+    /* ── 레이아웃 ── */
+    .app-container { display:flex; padding-top:60px; min-height:100vh; }
+    nav { width:280px; background:#161b22; border-right:1px solid #2a3242; height:calc(100vh - 60px); position:sticky; top:60px; z-index:1000; flex-shrink:0; }
+
+    @media(max-width:850px){
+      .menu-trigger{display:block!important;}
+      nav{position:fixed;top:0;left:-280px;width:280px;height:100%;z-index:2100;box-shadow:5px 0 15px rgba(0,0,0,.5);border-right:1px solid #2a3242;transition:left .3s ease;background:#161b22;}
+      nav.active{left:0;}
+      .app-container{display:block;}
+      .overlay.active{display:block;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:2050;}
+    }
+
+    /* ── 사이드바 ── */
+    .sidebar-user-info { padding:40px 20px 25px; background:rgba(244,196,48,.03); border-bottom:1px solid #2a3242; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; }
+    .sidebar-user-info img { width:75px; height:75px; border-radius:50%; border:2px solid #f4c430; margin-bottom:12px; object-fit:cover; }
+    .profile-edit-wrap { position:relative; display:inline-block; margin-bottom:12px; cursor:pointer; }
+    .profile-edit-wrap img { margin-bottom:0!important; transition:filter .2s; }
+    .profile-edit-wrap:hover img { filter:brightness(.7); }
+    .profile-edit-badge { position:absolute; bottom:2px; right:2px; width:22px; height:22px; background:#f4c430; border-radius:50%; border:2px solid #1c1f2a; display:flex; align-items:center; justify-content:center; font-size:11px; color:#111; pointer-events:none; }
+    .user-name-box { display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:15px; }
+    .u-name { font-size:18px; font-weight:bold; color:#fff; }
+    .close-nav { position:absolute; top:15px; right:15px; background:none; border:none; color:#aaa; font-size:28px; cursor:pointer; display:none; }
+    .nav-container { display:flex; flex-direction:column; padding:10px 0; }
+    .nav-link { font-size:16px; padding:15px 25px; color:#ccc; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.05); transition:.2s; }
+    .nav-link.active { color:#f4c430; background:rgba(244,196,48,.1); font-weight:bold; }
+
+    /* ── 폴더 메뉴 ── */
+    .nav-folder {}
+    .nav-folder-header { display:flex; align-items:center; justify-content:space-between; padding:14px 25px; color:#ccc; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.03); transition:background .2s,color .2s; user-select:none; font-size:15px; }
+    .nav-folder-header:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-folder-header.open { color:#f4c430; }
+    .nav-folder-title { display:flex; align-items:center; gap:8px; }
+    .nav-folder-arrow { font-size:10px; transition:transform .25s; color:#666; }
+    .nav-folder-header.open .nav-folder-arrow { transform:rotate(90deg); color:#f4c430; }
+    .nav-folder-children { overflow:hidden; max-height:0; transition:max-height .28s ease; background:rgba(0,0,0,.15); }
+    .nav-folder-children.open { max-height:300px; }
+    .nav-sub-link { display:block; font-size:14px; padding:11px 25px 11px 44px; color:#aaa; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.03); transition:background .15s,color .15s; }
+    .nav-sub-link:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-sub-link.active { color:#f4c430; background:rgba(244,196,48,.08); font-weight:600; }
+
+    /* ── 메인 콘텐츠 ── */
+    .main-content { flex:1; padding:30px; box-sizing:border-box; }
+    .wrap { width:100%; max-width:920px; margin:0 auto; }
+    h2 { color:#f4c430; margin-bottom:20px; font-weight:800; font-size:1.5rem; }
+
+    /* ── 통계 바 ── */
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1c1f2a;
+      border: 1px solid #2a3242;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 90px;
+      transition: .2s;
+    }
+    .stat-chip .stat-num {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .stat-chip .stat-label { color: #888; font-size: 11px; margin-top: 1px; }
+    .stat-chip.chip-total  { border-color: #3a4252; }
+    .stat-chip.chip-pending { border-color: rgba(255,152,0,.5); background: rgba(255,152,0,.07); }
+    .stat-chip.chip-pending .stat-num { color: #ff9800; }
+    .stat-chip.chip-approved { border-color: rgba(121,134,203,.4); background: rgba(121,134,203,.05); }
+    .stat-chip.chip-approved .stat-num { color: #7986cb; }
+
+    /* ── 컨트롤 바 (필터 + 정렬) ── */
+    .control-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .filter-group { display:flex; gap:8px; flex-wrap:wrap; }
+    .filter-btn {
+      background: #1c1f2a;
+      border: 1px solid #2a3242;
+      color: #aaa;
+      padding: 9px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: .2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-btn .badge-cnt {
+      background: rgba(255,255,255,.1);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .filter-btn.active { background:#f4c430; color:#000; border-color:#f4c430; }
+    .filter-btn.active .badge-cnt { background: rgba(0,0,0,.15); }
+    .filter-btn.filter-pending.has-pending { border-color: rgba(255,152,0,.6); color: #ff9800; }
+    .filter-btn.filter-pending.has-pending .badge-cnt { background: rgba(255,152,0,.2); color: #ff9800; }
+    .filter-btn.filter-pending.active { background: #ff9800; color: #000; border-color: #ff9800; }
+
+    /* ── 정렬 드롭다운 ── */
+    .sort-wrap { position: relative; }
+    .sort-btn {
+      background: #1c1f2a;
+      border: 1px solid #2a3242;
+      color: #aaa;
+      padding: 9px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: .2s;
+      white-space: nowrap;
+    }
+    .sort-btn:hover { border-color: #f4c430; color: #f4c430; }
+    .sort-dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      background: #1c1f2a;
+      border: 1px solid #2a3242;
+      border-radius: 12px;
+      overflow: hidden;
+      z-index: 500;
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    }
+    .sort-dropdown.open { display: block; }
+    .sort-option {
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #ccc;
+      cursor: pointer;
+      transition: background .15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .sort-option:last-child { border-bottom: none; }
+    .sort-option:hover { background: rgba(255,255,255,.05); color: #fff; }
+    .sort-option.active { color: #f4c430; background: rgba(244,196,48,.07); font-weight: 600; }
+    .sort-option .sort-check { margin-left: auto; font-size: 12px; opacity: 0; }
+    .sort-option.active .sort-check { opacity: 1; }
+
+    /* ── 유저 카드 ── */
+    .user-card { background:#1c1f2a; border:1px solid #2a3242; padding:16px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:15px; transition:.2s; }
+    .user-info { display:flex; align-items:center; gap:15px; flex:1; min-width:0; }
+    .profile-img { width:45px; height:45px; border-radius:50%; object-fit:cover; flex-shrink:0; }
+    .info-text { display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .nickname-text { font-size:15px; color:#fff; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .email-text { font-size:11px; opacity:.5; color:#ccc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .role-badge { font-size:9px; padding:2px 7px; border-radius:5px; font-weight:bold; text-transform:uppercase; }
+    .role-ADMIN { background:#ff5252; color:#fff; }
+    .role-MANAGER { background:#f4c430; color:#000; }
+    .role-MEMBER { background:#444; color:#ccc; }
+    .role-PENDING { background:#777; color:#fff; }
+    .my-label { font-size:10px; background:rgba(244,196,48,.15); color:#f4c430; padding:1px 5px; border-radius:4px; font-weight:bold; margin-left:5px; border:1px solid rgba(244,196,48,.3); }
+
+    .btn-group { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; flex-shrink:0; }
+    .btn-action { border:none; padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:.2s; white-space:nowrap; }
+    .btn-action:active { transform:scale(.95); }
+    .btn-action.loading { opacity:.6; pointer-events:none; }
+    .btn-action.loading::after { content:' ⏳'; font-size:12px; }
+
+    @media(max-width:650px){
+      .user-card { flex-direction:column; align-items:flex-start; padding:18px; }
+      .btn-group { width:100%; justify-content:flex-start; margin-top:10px; }
+      .btn-action { flex:1; padding:11px 8px; font-size:11px; }
+      .control-bar { flex-direction:column; align-items:flex-start; }
+      .sort-dropdown { right:auto; left:0; }
+    }
+
+    /* ── 승인 대기 카드 강조 ── */
+    .user-card.pending-card { border:1.5px solid rgba(255,152,0,.6); background:rgba(255,152,0,.07); box-shadow:0 0 10px rgba(255,152,0,.15); }
+    .pending-badge-pulse { display:inline-block; background:#ff9800; color:#000; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:20px; margin-left:6px; animation:pendingPulse 1.4s ease-in-out infinite; }
+    @keyframes pendingPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.95)} }
+
+    /* ── 구분선 ── */
+    .section-divider { display:flex; align-items:center; gap:12px; margin:18px 0 14px; font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+    .section-divider::before, .section-divider::after { content:''; flex:1; height:1px; background:#2a3242; }
+    .section-divider.divider-pending { color:#ff9800; }
+    .section-divider.divider-pending::before, .section-divider.divider-pending::after { background:rgba(255,152,0,.35); }
+    .section-divider.divider-approved { color:#7986cb; }
+    .section-divider.divider-approved::before, .section-divider.divider-approved::after { background:rgba(121,134,203,.3); }
+    .section-divider.divider-role { color:#607d8b; font-size:11px; margin:12px 0 10px; }
+    .section-divider.divider-role::before, .section-divider.divider-role::after { background:rgba(96,125,139,.25); }
+
+    /* ── 역할 변경 플래시 ── */
+    @keyframes cardFlash { 0%{background:rgba(0,230,118,.18);border-color:#00e676;box-shadow:0 0 12px rgba(0,230,118,.4)} 60%{background:rgba(0,230,118,.08);border-color:#00e676} 100%{background:#1c1f2a;border-color:#2a3242;box-shadow:none} }
+    .card-flash { animation:cardFlash 1.2s ease forwards; }
+
+    /* ── 빈 상태 ── */
+    .empty-state { text-align:center; padding:50px 20px; color:#555; }
+    .empty-state .empty-icon { font-size:40px; margin-bottom:12px; }
+    .empty-state p { font-size:14px; margin:0; }
+
+    /* ── 텍스트 보호 ── */
+    .notice-card,.user-card,.info-text,td,th { word-break:keep-all; overflow-wrap:break-word; }
+
+    /* ── 프로필 변경 버튼 ── */
+    .profile-change-btn {
+      display: block;
+      width: 100%;
+      margin: 6px 0 4px 0;
+      padding: 5px 0;
+      background: rgba(244,196,48,0.12);
+      color: #f4c430;
+      border: 1px solid rgba(244,196,48,0.35);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: 0.3px;
+      transition: background 0.15s;
+    }
+    .profile-change-btn:hover { background: rgba(244,196,48,0.22); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
+    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
+  </div>
+  <div class="user-box">
+    <button class="header-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,.05);border:1px solid #444;color:#ccc;padding:5px 10px;border-radius:20px;font-size:11px;cursor:pointer;">🌐 KO</button>
+  </div>
+</header>
+
+<div class="overlay" id="overlay" onclick="toggleNav(false)"></div>
+
+<div class="app-container">
+  <nav id="sideNav" class="side-nav">
+    <div class="sidebar-user-info">
+      <button class="close-nav" onclick="toggleNav(false)">×</button>
+      <div class="profile-edit-wrap" onclick="location.href='profile_select.html'" title="프로필 변경">
+        <img id="sidebarUserPhoto" src="" alt="profile" />
+        <div class="profile-edit-badge">✎</div>
+      </div>
+      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+      <div class="user-name-box">
+        <span id="sidebarUserName" class="u-name">...</span>
+        <span id="sidebarUserBadge" class="role-badge" style="display:none;"></span>
+      </div>
+      <button class="logout-btn" onclick="logout()" style="width:100%;padding:10px;font-size:13px;border:1px solid #444;background:rgba(255,255,255,.05);color:#ccc;border-radius:8px;cursor:pointer;" data-i18n="menu_logout">로그아웃</button>
+    </div>
+
+    <div class="nav-container">
+      <a href="main.html" class="nav-link" data-i18n="menu_home">홈</a>
+      <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+
+      <div class="nav-folder">
+        <div class="nav-folder-header" id="navFolderWeekly">
+          <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+          <span class="nav-folder-arrow">▶</span>
+        </div>
+        <div class="nav-folder-children" id="navFolderWeeklyChildren">
+          <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+          <a href="weekly.html" class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+          <a href="history.html" class="nav-sub-link" data-i18n="menu_history">📜 결산 내역</a>
+        </div>
+      </div>
+
+      <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+      <a href="admin.html" class="nav-link active" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+    </div>
+  <script>
+  (function(){
+    var FOLDER_KEY = 'roider_nav_weekly_open';
+    var header   = document.getElementById('navFolderWeekly');
+    var children = document.getElementById('navFolderWeeklyChildren');
+    if (!header || !children) return;
+    var path = window.location.pathname;
+    var isInFolder = path.includes('attendance.html') || path.includes('weekly.html') || path.includes('history.html');
+    var hasActive  = children.querySelector('.nav-sub-link.active');
+    var saved      = localStorage.getItem(FOLDER_KEY);
+    var shouldOpen = isInFolder || !!hasActive || saved === '1';
+    function setOpen(open) {
+      header.classList.toggle('open', open);
+      children.classList.toggle('open', open);
+      localStorage.setItem(FOLDER_KEY, open ? '1' : '0');
+    }
+    setOpen(shouldOpen);
+    header.addEventListener('click', function(e){
+      e.stopPropagation();
+      setOpen(!header.classList.contains('open'));
+    });
+  })();
+  </script>
+  </nav>
+
+  <main class="main-content">
+    <div class="wrap">
+      <h2 data-i18n="adm_title">🛡️ 길드 권한 관리</h2>
+
+      <!-- 통계 바 -->
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-chip chip-total">
+          <div>
+            <div class="stat-num" id="statTotal">-</div>
+            <div class="stat-label" data-i18n="adm_stat_total">전체</div>
+          </div>
+        </div>
+        <div class="stat-chip chip-pending">
+          <div>
+            <div class="stat-num" id="statPending">-</div>
+            <div class="stat-label" data-i18n="adm_stat_pending">승인 대기</div>
+          </div>
+        </div>
+        <div class="stat-chip chip-approved">
+          <div>
+            <div class="stat-num" id="statApproved">-</div>
+            <div class="stat-label" data-i18n="adm_stat_approved">승인 완료</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 컨트롤 바: 필터 + 정렬 -->
+      <div class="control-bar">
+        <div class="filter-group">
+          <button class="filter-btn active" id="filterAll" onclick="setFilter('all')" data-i18n="adm_filter_all">
+            전체 <span class="badge-cnt" id="cntAll">0</span>
+          </button>
+          <button class="filter-btn filter-pending" id="filterPending" onclick="setFilter('pending')" data-i18n="adm_filter_pending">
+            ⏳ 승인대기 <span class="badge-cnt" id="cntPending">0</span>
+          </button>
+          <button class="filter-btn" id="filterApproved" onclick="setFilter('approved')" data-i18n="adm_filter_approved">
+            ✅ 승인완료 <span class="badge-cnt" id="cntApproved">0</span>
+          </button>
+        </div>
+
+        <!-- 정렬 드롭다운 -->
+        <div class="sort-wrap" id="sortWrap">
+          <button class="sort-btn" onclick="toggleSortDropdown()" id="sortBtn">
+            <span id="sortBtnLabel">🔀 역할순</span> ▾
+          </button>
+          <div class="sort-dropdown" id="sortDropdown">
+            <div class="sort-option active" data-sort="role" onclick="setSort('role')">
+              👑 역할순 <span class="sort-check">✓</span>
+            </div>
+            <div class="sort-option" data-sort="nickname" onclick="setSort('nickname')">
+              🔤 닉네임순 <span class="sort-check">✓</span>
+            </div>
+            <div class="sort-option" data-sort="date" onclick="setSort('date')">
+              📅 가입일순 <span class="sort-check">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 유저 목록 -->
+      <div id="userList">
+        <div id="adminSkeleton">
+          <div class="skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div><div class="skeleton skeleton-badge"></div></div>
+          <div class="skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div><div class="skeleton skeleton-badge"></div></div>
+          <div class="skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div><div class="skeleton skeleton-badge"></div></div>
+          <div class="skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line short"></div></div><div class="skeleton skeleton-badge"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  let myUid, myRole;
+  let allUsers       = [];
+  let currentFilter  = 'all';
+  let currentSort    = localStorage.getItem('adminSort') || 'role';
+
+  // ── XSS 방지 ──
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function toggleNav(open) {
+    const nav = document.getElementById('sideNav');
+    const ov  = document.getElementById('overlay');
+    nav.classList.toggle('active', open);
+    ov.classList.toggle('active', open);
+  }
+
+  // ── 정렬 드롭다운 ──
+  function toggleSortDropdown() {
+    document.getElementById('sortDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('sortWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('sortDropdown').classList.remove('open');
+    }
+  });
+
+  function setSort(sortKey) {
+    currentSort = sortKey;
+    localStorage.setItem('adminSort', sortKey);
+    document.querySelectorAll('.sort-option').forEach(el => {
+      el.classList.toggle('active', el.dataset.sort === sortKey);
+    });
+    const sortLabels = {
+      role: { ko: '👑 역할순', en: '👑 By Role' },
+      nickname: { ko: '🔤 닉네임순', en: '🔤 By Name' },
+      date: { ko: '📅 가입일순', en: '📅 By Date' }
+    };
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    const lbl = document.getElementById('sortBtnLabel');
+    if (lbl) lbl.textContent = sortLabels[sortKey]?.[lang] || sortLabels[sortKey]?.ko;
+    const dd = document.getElementById('sortDropdown');
+    if (dd) dd.classList.remove('open');
+    renderUsers();
+  }
+
+  function setFilter(role) {
+    currentFilter = role;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    const map = { all:'filterAll', pending:'filterPending', approved:'filterApproved' };
+    document.getElementById(map[role])?.classList.add('active');
+    renderUsers();
+  }
+
+  // ── i18n 강제 적용 ──
+  function forceTranslate() {
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    if (!window.i18n || !window.i18n[lang]) return;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (window.i18n[lang][key]) el.textContent = window.i18n[lang][key];
+    });
+  }
+
+  // ── 인증 & 로드 ──
+  auth.onAuthStateChanged(async user => {
+    if (!user) return location.replace('login.html');
+    const snap = await db.collection('users').doc(user.uid).get();
+    const data = snap.data();
+    if (!data || (data.role !== 'admin' && data.role !== 'manager')) return location.replace('main.html');
+
+    myUid = user.uid;
+    myRole = data.role;
+
+    document.getElementById('sidebarUserName').textContent = data.nickname;
+    document.getElementById('sidebarUserPhoto').src =
+      data.customPhotoURL || user.photoURL ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nickname)}&background=2a3242&color=f4c430&bold=true`;
+
+    const badge = document.getElementById('sidebarUserBadge');
+    badge.textContent = myRole.toUpperCase();
+    badge.style.display = 'inline-block';
+    badge.className = `role-badge role-${myRole.toUpperCase()}`;
+
+    document.getElementById('navAdminMenu').style.display = 'block';
+
+    // 정렬 버튼 초기 라벨 설정
+    setSort(currentSort);
+    updateLangUI();
+    loadUsers();
+  });
+
+  // ── 삭제 대상 닉네임 목록 (pending 상태에서 즉시 삭제) ──
+  const AUTO_DELETE_NICKNAMES = ['태리잇', '백윤', '김장훈남', '민중시', '-', 'NightWatcher', 'Emoney', '백지'];
+
+  async function autoDeletePendingUsers() {
+    try {
+      const snap = await db.collection('users').where('role', '==', 'pending').get();
+      const toDelete = snap.docs.filter(doc => {
+        const nick = doc.data().nickname || '';
+        return AUTO_DELETE_NICKNAMES.includes(nick);
+      });
+      if (toDelete.length === 0) return;
+      const batch = db.batch();
+      toDelete.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      console.log(`[Admin] 자동 삭제 완료: ${toDelete.map(d=>d.data().nickname).join(', ')}`);
+    } catch(e) {
+      console.warn('[Admin] 자동 삭제 오류:', e);
+    }
+  }
+
+  function loadUsers() {
+    if (window.unsubscribeAdmin) window.unsubscribeAdmin();
+    // 페이지 로드 시 삭제 대상 pending 유저 자동 삭제
+    autoDeletePendingUsers();
+    window.unsubscribeAdmin = db.collection('users').onSnapshot(snap => {
+      allUsers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderUsers();
+    });
+  }
+
+  // ── 정렬 함수 ──
+  function sortUsers(users) {
+    const ROLE_ORDER = { admin:1, manager:2, member:3, pending:99 };
+    return [...users].sort((a, b) => {
+      if (currentSort === 'role') {
+        const ro = (ROLE_ORDER[a.role]||9) - (ROLE_ORDER[b.role]||9);
+        if (ro !== 0) return ro;
+        return (a.nickname||'').localeCompare(b.nickname||'','ko');
+      } else if (currentSort === 'nickname') {
+        return (a.nickname||'').localeCompare(b.nickname||'','ko');
+      } else if (currentSort === 'date') {
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return ta - tb; // 오래된 순 (내림차순은 tb - ta)
+      }
+      return 0;
+    });
+  }
+
+  // ── 메인 렌더 ──
+  // null-safe setter
+  function setEl(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  function renderUsers() {
+    const list = document.getElementById('userList');
+    if (!list) return;
+    const skeleton = document.getElementById('adminSkeleton');
+    if (skeleton) skeleton.remove();
+
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+
+    // 전체 통계
+    const totalAll      = allUsers.length;
+    const totalPending  = allUsers.filter(u => (u.role||'pending') === 'pending').length;
+    const totalApproved = totalAll - totalPending;
+
+    setEl('statTotal',    totalAll);
+    setEl('statPending',  totalPending);
+    setEl('statApproved', totalApproved);
+    setEl('cntAll',       totalAll);
+    setEl('cntPending',   totalPending);
+    setEl('cntApproved',  totalApproved);
+
+    // 승인 대기자 있을 때 필터 버튼 강조
+    const fpBtn = document.getElementById('filterPending');
+    if (fpBtn) {
+      if (totalPending > 0) fpBtn.classList.add('has-pending');
+      else fpBtn.classList.remove('has-pending');
+    }
+
+    // 필터링
+    let filtered;
+    if (currentFilter === 'pending')  filtered = allUsers.filter(u => (u.role||'pending') === 'pending');
+    else if (currentFilter === 'approved') filtered = allUsers.filter(u => (u.role||'pending') !== 'pending');
+    else filtered = allUsers;
+
+    const pendingUsers  = filtered.filter(u => (u.role||'pending') === 'pending');
+    const approvedUsers = filtered.filter(u => (u.role||'pending') !== 'pending');
+
+    // 승인 완료 정렬
+    const sortedApproved = sortUsers(approvedUsers);
+
+    list.innerHTML = '';
+
+    // ── ① 승인 대기 섹션 ──────────────────────────────────────
+    if (pendingUsers.length > 0) {
+      list.innerHTML += `
+        <div class="section-divider divider-pending">
+          ⏳ ${lang==='ko'?'승인 대기':'Pending Approval'}
+          <span style="background:rgba(255,152,0,.25);color:#ff9800;padding:1px 9px;border-radius:10px;font-size:11px;">${pendingUsers.length}</span>
+        </div>`;
+      pendingUsers.forEach(u => { list.innerHTML += buildCard(u, lang); });
+    } else if (currentFilter === 'pending') {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">✅</div>
+          <p>${lang==='ko'?'승인 대기 중인 사용자가 없습니다.':'No users pending approval.'}</p>
+        </div>`;
+      return;
+    }
+
+    // ── ② 승인 완료 섹션 ─────────────────────────────────────
+    if (sortedApproved.length > 0) {
+      if (currentFilter === 'all' && pendingUsers.length > 0) {
+        list.innerHTML += `
+          <div class="section-divider divider-approved" style="margin-top:24px;">
+            ✅ ${lang==='ko'?'승인 완료 멤버':'Approved Members'}
+            <span style="background:rgba(121,134,203,.2);color:#7986cb;padding:1px 9px;border-radius:10px;font-size:11px;">${sortedApproved.length}</span>
+          </div>`;
+      }
+
+      // 역할순 정렬일 때만 역할별 서브 구분선 표시
+      if (currentSort === 'role') {
+        const roleGroups = [
+          { key:'admin',   label: lang==='ko'?'👑 관리자':'👑 Admin' },
+          { key:'manager', label: lang==='ko'?'🛡️ 운영진':'🛡️ Manager' },
+          { key:'member',  label: lang==='ko'?'⚔️ 멤버':'⚔️ Member' },
+        ];
+        roleGroups.forEach(({key, label}) => {
+          const group = sortedApproved.filter(u => (u.role||'member') === key);
+          if (group.length === 0) return;
+          list.innerHTML += `
+            <div class="section-divider divider-role">
+              ${label}
+              <span style="background:rgba(255,255,255,.07);color:#888;padding:1px 8px;border-radius:8px;font-size:10px;">${group.length}</span>
+            </div>`;
+          group.forEach(u => { list.innerHTML += buildCard(u, lang); });
+        });
+      } else {
+        // 닉네임순 / 가입일순 → 구분선 없이 한 줄로
+        sortedApproved.forEach(u => { list.innerHTML += buildCard(u, lang); });
+      }
+    } else if (currentFilter === 'approved') {
+      list.innerHTML += `
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <p>${lang==='ko'?'승인된 멤버가 없습니다.':'No approved members yet.'}</p>
+        </div>`;
+    }
+
+    // 전체 필터에서 아무것도 없을 때
+    if (filtered.length === 0 && currentFilter === 'all') {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <p>${lang==='ko'?'등록된 사용자가 없습니다.':'No users registered.'}</p>
+        </div>`;
+    }
+
+    forceTranslate();
+  }
+
+  // ── 카드 빌더 ──
+  function buildCard(u, lang) {
+    const isMe     = u.id === myUid;
+    const uRole    = (u.role || 'pending').toLowerCase();
+    const isPending = uRole === 'pending';
+
+    const T = (key, fallback) => (window.i18n?.[lang]?.[key]) || fallback;
+    const tApp  = T('adm_btn_approve',        lang==='ko'?'승인':'Approve');
+    const tDemP = T('adm_btn_demote_pending', lang==='ko'?'대기 강등':'Demote');
+    const tMan  = T('adm_btn_manager',        lang==='ko'?'운영진 임명':'→ Manager');
+    const tAdm  = T('adm_btn_admin',          lang==='ko'?'관리자 임명':'→ Admin');
+    const tDemM = T('adm_btn_member',         lang==='ko'?'멤버로 강등':'→ Member');
+
+    const tDel = lang==='ko' ? '🗑️ 삭제' : '🗑️ Delete';
+
+    let btns = '';
+    if (!isMe) {
+      if (isPending) {
+        // 승인 대기 중인 신규 유저: 승인 버튼 + 삭제 버튼
+        btns = `<button class="btn-action" style="background:#00e676;color:#000;" onclick="changeRole('${u.id}','member',this)">${tApp}</button>`;
+        btns += ` <button class="btn-action" style="background:#ff5252;color:#fff;" onclick="deleteUser('${u.id}','${escapeHtml(u.nickname||'')}',this)">${tDel}</button>`;
+      } else if (uRole === 'member') {
+        // 승인된 멤버: 승진 버튼 + 삭제 버튼 (대기 강등 없음)
+        if (myRole === 'admin') {
+          btns += `<button class="btn-action" style="background:#00b0ff;color:#fff;" onclick="changeRole('${u.id}','manager',this)">${tMan}</button> `;
+          btns += `<button class="btn-action" style="background:#f4c430;color:#000;" onclick="changeRole('${u.id}','admin',this)">${tAdm}</button> `;
+        }
+        btns += `<button class="btn-action" style="background:#ff5252;color:#fff;" onclick="deleteUser('${u.id}','${escapeHtml(u.nickname||'')}',this)">${tDel}</button>`;
+      } else if (uRole === 'manager' && myRole === 'admin') {
+        btns += `<button class="btn-action" style="background:#444;color:#fff;" onclick="changeRole('${u.id}','member',this)">${tDemM}</button> `;
+        btns += `<button class="btn-action" style="background:#ff5252;color:#fff;" onclick="deleteUser('${u.id}','${escapeHtml(u.nickname||'')}',this)">${tDel}</button>`;
+      }
+    }
+
+    const photoUrl = u.customPhotoURL || u.photoURL ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nickname||'U')}&background=2a3242&color=aaa`;
+    const myStyle  = isMe ? 'border:1px solid rgba(244,196,48,.5);background:rgba(244,196,48,.05);' : '';
+    const pendingPulse = isPending
+      ? `<span class="pending-badge-pulse">⏳ ${lang==='ko'?'승인 대기':'Pending'}</span>` : '';
+
+    const joinDate = u.createdAt?.seconds
+      ? `<span style="font-size:10px;color:#555;margin-left:6px;">📅 ${new Date(u.createdAt.seconds*1000).toLocaleDateString('ko-KR')}</span>` : '';
+
+    const countryCode = u.country ? u.country.toUpperCase() : null;
+    const geoTooltip  = [countryCode, u.geoCity, u.geoTimezone].filter(Boolean).join(' / ');
+    const countryFlag = countryCode
+      ? `<span style="margin-left:4px;font-size:10px;color:#7a8598;vertical-align:middle;"
+               title="${geoTooltip}">
+           <img src="https://flagcdn.com/16x12/${countryCode.toLowerCase()}.png"
+                style="border-radius:1px;vertical-align:middle;margin-right:2px;"
+                onerror="this.style.display='none';">
+           ${countryCode}${u.geoCity ? ' · ' + u.geoCity : ''}
+         </span>`
+      : '';
+
+    return `
+      <div class="user-card${isPending?' pending-card':''}" data-user-uid="${u.id}" style="${myStyle}">
+        <div class="user-info">
+          <img src="${escapeHtml(photoUrl)}" class="profile-img border-${uRole}" onerror="this.src='https://ui-avatars.com/api/?name=U&background=2a3242&color=aaa'">
+          <div class="info-text">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+              <b class="nickname-text">${escapeHtml(u.nickname||'-')}</b>
+              ${isMe?'<span class="my-label">MY</span>':''}
+              <span class="role-badge role-${uRole.toUpperCase()}">${escapeHtml(uRole)}</span>
+              ${pendingPulse}
+              ${joinDate}
+              ${countryFlag}
+            </div>
+            <p class="email-text">${escapeHtml(u.email||'No Email')}</p>
+          </div>
+        </div>
+        <div class="btn-group">${btns}</div>
+      </div>`;
+  }
+
+  // ── 권한 변경 ──
+  async function changeRole(uid, newRole, triggerBtn) {
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    const roleLabels   = { pending:'대기', member:'멤버', manager:'운영진', admin:'관리자' };
+    const roleLabelsEN = { pending:'Pending', member:'Member', manager:'Manager', admin:'Admin' };
+    const roleIcons    = { pending:'⚠️', member:'⚔️', manager:'🛡️', admin:'👑' };
+
+    const msg = lang==='ko'
+      ? `권한을 '${roleLabels[newRole]||newRole}'(으)로 변경하시겠습니까?`
+      : `Change role to '${roleLabelsEN[newRole]||newRole}'?`;
+
+    // showConfirm – ui_utils.js 버전 우선, 실패시 native confirm 폴백
+    let ok = false;
+    try {
+      const confirmFn = (typeof showConfirm === 'function') ? showConfirm : null;
+      if (confirmFn) {
+        const result = confirmFn(msg, {
+          danger: newRole==='pending',
+          icon: roleIcons[newRole]||'🛡️',
+          okText:     lang==='ko'?'변경하기':'Change',
+          cancelText: lang==='ko'?'취소':'Cancel'
+        });
+        // Promise 또는 boolean 둘 다 처리
+        ok = (result && typeof result.then === 'function') ? await result : !!result;
+      } else {
+        ok = window.confirm(msg);
+      }
+    } catch(confirErr) {
+      console.warn('showConfirm 오류, native confirm 사용:', confirErr);
+      ok = window.confirm(msg);
+    }
+    if (!ok) return;
+
+    if (triggerBtn) triggerBtn.classList.add('loading');
+
+    try {
+      await db.collection('users').doc(uid).update({ role: newRole });
+
+      const card = document.querySelector(`.user-card[data-user-uid="${uid}"]`);
+      if (card) {
+        card.classList.remove('card-flash');
+        void card.offsetWidth;
+        card.classList.add('card-flash');
+        const b = card.querySelector('.role-badge');
+        if (b) { b.textContent = (lang==='ko'?roleLabels:roleLabelsEN)[newRole]||newRole; b.className=`role-badge role-${newRole.toUpperCase()}`; }
+        setTimeout(()=>card.classList.remove('card-flash'),1300);
+      }
+
+      const label = (lang==='ko'?roleLabels:roleLabelsEN)[newRole];
+      showToast(
+        lang==='ko'
+          ? `${roleIcons[newRole]} 권한이 '${label}'(으)로 변경되었습니다.`
+          : `${roleIcons[newRole]} Role changed to '${label}'.`,
+        'success', 3500
+      );
+    } catch (e) {
+      showToast(lang==='ko'?'오류가 발생했습니다.':'An error occurred.','error');
+    } finally {
+      if (triggerBtn) triggerBtn.classList.remove('loading');
+    }
+  }
+
+  // ── 유저 삭제 ──
+  async function deleteUser(uid, nickname, triggerBtn) {
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    const msg = lang==='ko'
+      ? `'${nickname}' 유저를 완전히 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+      : `Delete user '${nickname}'?\nThis action cannot be undone.`;
+
+    let ok = false;
+    try {
+      const confirmFn = (typeof showConfirm === 'function') ? showConfirm : null;
+      if (confirmFn) {
+        const result = confirmFn(msg, {
+          danger: true,
+          icon: '🗑️',
+          okText:     lang==='ko'?'삭제':'Delete',
+          cancelText: lang==='ko'?'취소':'Cancel'
+        });
+        ok = (result && typeof result.then === 'function') ? await result : !!result;
+      } else {
+        ok = window.confirm(msg);
+      }
+    } catch(e) { ok = window.confirm(msg); }
+    if (!ok) return;
+
+    if (triggerBtn) triggerBtn.classList.add('loading');
+    try {
+      await db.collection('users').doc(uid).delete();
+      showToast(
+        lang==='ko' ? `🗑️ '${nickname}' 유저가 삭제되었습니다.` : `🗑️ User '${nickname}' has been deleted.`,
+        'success', 3000
+      );
+    } catch(e) {
+      showToast(lang==='ko'?'삭제 중 오류가 발생했습니다.':'Error occurred during deletion.','error');
+    } finally {
+      if (triggerBtn) triggerBtn.classList.remove('loading');
+    }
+  }
+
+  // ── 언어 ──
+  function handleLangChange() {
+    if (typeof window.openLangDropdown === 'function') {
+      window.openLangDropdown();
+    } else {
+      let lang = localStorage.getItem('roider_lang') || 'ko';
+      lang = lang==='ko'?'en':'ko';
+      localStorage.setItem('roider_lang', lang);
+      updateLangUI();
+    }
+  }
+
+  function toggleLanguage() { handleLangChange(); }
+
+  function updateLangUI() {
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    const btn = document.getElementById('langBtn');
+    if (btn) btn.textContent = '🌐 ' + lang.toUpperCase();
+    if (typeof applyLanguage==='function') applyLanguage();
+    if (typeof checkNoticeBadge==='function') checkNoticeBadge(db, myUid);
+    // 정렬 버튼 라벨 갱신
+    setSort(currentSort);  // setSort 내부에서 renderUsers 호출됨
+    forceTranslate();
+  }
+
+  function logout() { auth.signOut().then(()=>location.replace('login.html')); }
+</script>
+
+</body>
+</html>

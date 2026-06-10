@@ -1,0 +1,18 @@
+{
+  "name": "roider-geoip-updater",
+  "version": "2.0.0",
+  "description": "ROIDER GUILD — GeoIP 일괄 업데이트 도구",
+  "main": "geoip_batch_update.js",
+  "scripts": {
+    "report":   "node geoip_report.js",
+    "dry-run":  "node geoip_batch_update.js --dry-run",
+    "update":   "node geoip_batch_update.js",
+    "force":    "node geoip_batch_update.js --force",
+    "update:slow": "node geoip_batch_update.js --delay 2000"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "node-fetch": "^2.7.0"
+  }
+}

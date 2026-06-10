@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+  <meta charset="UTF-8" />
+  <meta name="description" content="ROIDER 길드 공지사항 - 최신 소식 및 업데이트">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ROIDER GUILD - 공지사항</title>
+  <link rel="stylesheet" href="header_standard.css">
+  <link rel="stylesheet" href="common_style.css"> 
+  <link rel="manifest" href="manifest.json">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <!-- FCM 메시징 SDK (푸시 알림) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+  <script src="push_manager.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="i18n_added.js" defer></script>
+  
+  <style>
+    /* 로딩 오버레이 */
+    /* → common_style.css 참조 */
+
+    /* [헤더 스타일] */
+    header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      padding: 10px 15px !important;
+      background: #121721 !important;
+      border-bottom: 1px solid #2a3242 !important;
+      min-height: 80px !important;
+      box-sizing: border-box !important;
+      position: sticky !important;
+      top: 0 !important;
+      width: 100%;
+      z-index: 2000 !important;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    }
+    .header-left {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+    }
+    .logo {
+      white-space: nowrap !important;
+      color: #f4c430;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .menu-trigger { 
+      display: none; 
+      font-size: 24px; 
+      color: var(--accent); 
+      background: none; 
+      border: none; 
+      cursor: pointer; 
+      padding: 0; 
+      line-height: 1;
+    }
+
+    /* [전체 레이아웃 구성] */
+    .app-container {
+      display: flex;
+      padding-top: 80px;
+      min-height: 100vh;
+    }
+
+    /* [사이드바 - PC 상시 노출] */
+    nav { 
+      width: 250px; 
+      background: #161b22; 
+      border-right: 1px solid #2a3242; 
+      height: calc(100vh - 60px); 
+      position: sticky; 
+      top: 60px; 
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    /* 반응형 레이아웃 (모바일) */
+    @media (max-width: 850px) {
+      .menu-trigger { display: block !important; }
+      nav { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; z-index: 2100; box-shadow: 5px 0 15px rgba(0,0,0,0.5); border-right: 1px solid #2a3242; transition: left 0.3s ease; background: #161b22; }
+      nav.active { left: 0; }
+      .app-container { display: block; }
+      .nav-container { flex-direction: column; padding: 10px 0; justify-content: flex-start; height: auto; gap: 0; }
+      .nav-link { font-size: 16px; padding: 15px 25px; width: 100%; box-sizing: border-box; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      .overlay.active { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2050; }
+    }
+
+    /* [사이드바 유저 정보 레이아웃] */
+    .sidebar-user-info {
+      padding: 40px 20px 25px;
+      background: rgba(244, 196, 48, 0.03);
+      border-bottom: 1px solid #2a3242;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .sidebar-user-info img {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      margin-bottom: 12px;
+      object-fit: cover;
+      box-sizing: border-box;
+    }
+
+    /* 계급 테두리 스타일 추가 */
+    /* → common_style.css 참조 */
+
+    /* 역할 배지 스타일 추가 */
+    /* → common_style.css 참조 */
+
+    .user-name-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 15px;
+    }
+    .u-name { font-size: 17px; font-weight: bold; color: #fff; }
+    
+    .close-nav {
+      position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 28px; cursor: pointer; line-height: 1; z-index: 10; padding: 5px; display: none;
+    }
+
+    .nav-container { display: flex; flex-direction: column; }
+    .nav-link { 
+      font-size: 15px; padding: 14px 25px; color: #ccc; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s; 
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-link.active { color: #f4c430; background: rgba(244, 196, 48, 0.1); font-weight: bold; }
+    /* ── 주간 컨텐츠 기록부 폴더 메뉴 ── */
+    .nav-folder {}
+    .nav-folder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 25px;
+      color: #ccc;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.2s, color 0.2s;
+      user-select: none;
+      font-size: 15px;
+    }
+    .nav-folder-header:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-folder-header.open  { color: #f4c430; }
+    .nav-folder-title { display: flex; align-items: center; gap: 8px; }
+    .nav-folder-arrow {
+      font-size: 10px;
+      transition: transform 0.25s;
+      color: #666;
+    }
+    .nav-folder-header.open .nav-folder-arrow { transform: rotate(90deg); color: #f4c430; }
+    .nav-folder-children {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.28s ease;
+      background: rgba(0,0,0,0.15);
+    }
+    .nav-folder-children.open { max-height: 300px; }
+    .nav-sub-link {
+      display: block;
+      font-size: 14px;
+      padding: 11px 25px 11px 44px;
+      color: #aaa;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-sub-link:hover  { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-sub-link.active { color: #f4c430; background: rgba(244,196,48,0.08); font-weight: 600; }
+
+
+    /* [메인 콘텐츠 영역] */
+    .main-content { flex: 1; padding: 30px; box-sizing: border-box; }
+
+    .notice-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+    h2 { color: #f4c430; margin: 0; font-weight: 800; font-size: 1.4rem; }
+    
+    .btn-write { background: #f4c430; color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+    .notice-card { 
+      background: #1c1f2a; border: 1px solid #2a3242; border-radius: 12px; 
+      padding: 20px; margin-bottom: 15px; position: relative; box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .notice-card:hover {
+      border-color: rgba(244,196,48,0.3);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .notice-card h3 { margin: 0 0 10px 0; font-size: 16px; color: #fff; line-height: 1.4; }
+    .notice-date { font-size: 11px; color: #555; }
+    
+    /* 모달 스타일 */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
+    .modal-content { background: #1c1f2a; padding: 25px; border-radius: 16px; width: 92%; max-width: 600px; border: 1px solid #f4c430; box-sizing: border-box; }
+    
+    input, textarea { width: 100%; background: #0f1015; border: 1px solid #2a3242; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; font-family: inherit; }
+    
+    .notice-actions { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
+    .action-link { font-size: 12px; color: #8b949e; cursor: pointer; text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .notice-actions { position: static; margin-bottom: 10px; justify-content: flex-end; }
+    }
+
+    /* ── 프로필 변경 버튼 ── */
+    .profile-change-btn {
+      display: block;
+      width: 100%;
+      margin: 6px 0 4px 0;
+      padding: 5px 0;
+      background: rgba(244,196,48,0.12);
+      color: #f4c430;
+      border: 1px solid rgba(244,196,48,0.35);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: 0.3px;
+      transition: background 0.15s;
+    }
+    .profile-change-btn:hover { background: rgba(244,196,48,0.22); }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay">ROIDER GUILD Loading...</div>
+
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
+    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
+  </div>
+  <div class="user-box">
+    <button class="logout-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,0.05); border:1px solid #444; color:#ccc; padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer;">🌐 KO</button>
+  </div>
+</header>
+
+<div class="overlay" id="overlay" onclick="toggleNav(false)"></div>
+
+<div class="app-container">
+  <nav id="sideNav" class="side-nav">
+    <div class="sidebar-user-info">
+      <button class="close-nav" onclick="toggleNav(false)">×</button>
+      <img id="userPhoto" src="" alt="profile" />
+      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+      <div class="user-name-box">
+        <span id="userName" class="u-name">...</span>
+        <span id="myRoleBadge" class="role-badge"></span>
+      </div>
+      <button class="logout-btn" data-i18n="menu_logout" onclick="logout()" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #444; background: rgba(255,255,255,0.05); color: #ccc; border-radius: 8px; cursor: pointer;">로그아웃</button>
+    </div>
+
+    <div class="nav-container">
+      <a href="main.html" class="nav-link" data-i18n="menu_home">홈</a>
+      <a href="notice.html" class="nav-link active" data-i18n="menu_notice">공지사항</a>
+
+      <!-- 주간 컨텐츠 기록부 폴더 -->
+      <div class="nav-folder">
+        <div class="nav-folder-header" id="navFolderWeekly">
+          <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+          <span class="nav-folder-arrow">▶</span>
+        </div>
+        <div class="nav-folder-children" id="navFolderWeeklyChildren">
+          <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+          <a href="weekly.html" class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+          <a href="history.html" class="nav-sub-link" data-i18n="menu_history">📜 결산 내역</a>
+        </div>
+      </div>
+
+      <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+      <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+    </div>
+  
+  <script>
+  (function(){
+    var FOLDER_KEY = 'roider_nav_weekly_open';
+    var header   = document.getElementById('navFolderWeekly');
+    var children = document.getElementById('navFolderWeeklyChildren');
+    if (!header || !children) return;
+
+    var path = window.location.pathname;
+    var isInFolder = path.includes('attendance.html') || path.includes('weekly.html') || path.includes('history.html');
+    var hasActive  = children.querySelector('.nav-sub-link.active');
+    var saved      = localStorage.getItem(FOLDER_KEY);
+    var shouldOpen = isInFolder || !!hasActive || saved === '1';
+
+    function setOpen(open) {
+      header.classList.toggle('open', open);
+      children.classList.toggle('open', open);
+      localStorage.setItem(FOLDER_KEY, open ? '1' : '0');
+    }
+    setOpen(shouldOpen);
+
+    header.addEventListener('click', function(e){
+      e.stopPropagation();
+      setOpen(!header.classList.contains('open'));
+    });
+  })();
+  </script>
+</nav>
+
+  <main class="main-content">
+    <div class="notice-header">
+      <h2 data-i18n="menu_notice">📢 길드 공지사항</h2>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button id="pushToggleBtn" class="btn-push-toggle" onclick="togglePushNotification()" title="푸시 알림 설정">
+          <span class="push-status-dot" id="pushStatusDot"></span>
+          <span id="pushToggleText">알림 켜기</span>
+        </button>
+        <button id="adminWriteBtn" class="btn-write" style="display:none;" onclick="openModal()" data-i18n="noti_btn_write">공지 작성</button>
+      </div>
+    </div>
+    <div id="noticeList"></div>
+    <div id="noticeSkeleton">
+      <div class="skeleton-notice-card"><div class="skeleton skeleton-line" style="width:60%;height:20px;margin-bottom:10px;"></div><div class="skeleton skeleton-line" style="width:90%;height:14px;margin-bottom:6px;"></div><div class="skeleton skeleton-line" style="width:75%;height:14px;"></div></div>
+      <div class="skeleton-notice-card"><div class="skeleton skeleton-line" style="width:50%;height:20px;margin-bottom:10px;"></div><div class="skeleton skeleton-line" style="width:85%;height:14px;margin-bottom:6px;"></div><div class="skeleton skeleton-line" style="width:70%;height:14px;"></div></div>
+      <div class="skeleton-notice-card"><div class="skeleton skeleton-line" style="width:65%;height:20px;margin-bottom:10px;"></div><div class="skeleton skeleton-line" style="width:80%;height:14px;"></div></div>
+    </div>
+  </main>
+</div>
+
+<div id="noticeModal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalTitle" style="color:#f4c430; margin-top:0;">공지사항 작성</h3>
+    <div id="noticeEditInfo" style="display:none; font-size:11px; color:#666; margin-bottom:12px; padding:8px; background:rgba(255,255,255,0.03); border-radius:6px;"></div>
+    <input type="hidden" id="editId">
+    <input type="text" id="noticeTitle" placeholder="제목">
+    <textarea id="noticeContent" rows="10" placeholder="내용 (URL은 자동으로 링크로 변환됩니다)"></textarea>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-write" style="flex:1;" onclick="saveNotice()" data-i18n="btn_save">저장</button>
+      <button class="btn-write" style="flex:1; background:#444; color:#fff;" onclick="closeModal()" data-i18n="btn_close">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let myNickname = "", myRole = "", myUid = "";
+
+  // ── 날짜 포맷 헬퍼 ──────────────────────────────────────
+  function formatNoticeDate(ts) {
+    if (!ts) return '';
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      const now = new Date();
+      const diff = Math.floor((now - d) / 1000); // 초 단위 차이
+      if (diff < 60)  return '방금 전';
+      if (diff < 3600) return `${Math.floor(diff/60)}분 전`;
+      if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`;
+      const y = d.getFullYear(), mo = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      const h = String(d.getHours()).padStart(2,'0'), m = String(d.getMinutes()).padStart(2,'0');
+      // 올해면 월-일만, 다른 해면 연도 포함
+      return now.getFullYear() === y ? `${mo}.${day} ${h}:${m}` : `${y}.${mo}.${day}`;
+    } catch(e) { return ''; }
+  }
+
+  function formatNoticeDateEN(ts) {
+    if (!ts) return '';
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      const now = new Date();
+      const diff = Math.floor((now - d) / 1000);
+      if (diff < 60)  return 'Just now';
+      if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year: now.getFullYear()===d.getFullYear()?undefined:'numeric' });
+    } catch(e) { return ''; }
+  }
+
+  // ── URL 자동 링크화 ──────────────────────────────────────
+  function linkify(text) {
+    if (!text) return '';
+    // XSS 방지: 먼저 이스케이프 후 URL만 링크로 복원
+    const escaped = escapeHtml(text);
+    const urlPattern = /(https?:\/\/[^\s<>"'\)\]]+)/g;
+    return escaped.replace(urlPattern, url =>
+      `<a href="${url}" target="_blank" rel="noopener noreferrer"
+          style="color:#7db3ff; text-decoration:underline; word-break:break-all;"
+          onclick="event.stopPropagation()">${url}</a>`
+    );
+  }
+
+  // ✅ [버그수정] XSS 방지용 HTML 이스케이프 함수
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function toggleNav(open) {
+    const nav = document.getElementById('sideNav');
+    const overlay = document.getElementById('overlay');
+    if (open) { nav.classList.add('active'); overlay.classList.add('active'); } 
+    else { nav.classList.remove('active'); overlay.classList.remove('active'); }
+  }
+
+  function handleLangChange() {
+    if (typeof window.openLangDropdown === 'function') {
+      window.openLangDropdown();
+    } else {
+      currentLang = (currentLang === 'ko') ? 'en' : 'ko';
+      localStorage.setItem('roider_lang', currentLang);
+      updateLangButton();
+      if (typeof applyLanguage === 'function') applyLanguage();
+    }
+  }
+
+  function toggleLanguage() { handleLangChange(); }
+
+  function updateLangButton() {
+    const langBtn = document.getElementById('langBtn');
+    if (langBtn) {
+      var lang = localStorage.getItem('roider_lang') || 'ko';
+      langBtn.textContent = '🌐 ' + lang.toUpperCase();
+    }
+  }
+
+  auth.onAuthStateChanged(async user => {
+    if (!user) return location.replace("login.html");
+    myUid = user.uid;
+    try {
+      const snap = await db.collection("users").doc(user.uid).get();
+      if (!snap.exists || snap.data().role === "pending") return location.replace("pending.html");
+      
+      const data = snap.data();
+      myNickname = data.nickname;
+      myRole = (data.role || "member").toLowerCase();
+
+      document.getElementById("loadingOverlay").style.display = "none";
+      document.getElementById("userName").textContent = myNickname || "User";
+      // 공지 읽음 처리 (뱃지 초기화)
+      if (typeof markNoticeRead === 'function') markNoticeRead(db, user.uid);
+      
+      const photoEl = document.getElementById("userPhoto");
+      if (photoEl) {
+        photoEl.src = data.customPhotoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(myNickname || 'U')}&background=2a3242&color=f4c430&bold=true`;
+        // 계급 테두리 적용
+        photoEl.className = `border-${myRole}`;
+      }
+      
+      const badgeEl = document.getElementById("myRoleBadge");
+      if (badgeEl && myRole) {
+        badgeEl.textContent = myRole.toUpperCase();
+        badgeEl.className = `role-badge role-${myRole.toUpperCase()}`;
+        badgeEl.style.display = "inline-block";
+      }
+
+      updateLangButton();
+      if (typeof applyLanguage === 'function') applyLanguage();
+
+      if (myRole === "admin" || myRole === "manager") {
+        document.getElementById("adminWriteBtn").style.display = "block";
+        const navAdmin = document.getElementById("navAdminMenu");
+        if (navAdmin) navAdmin.style.display = "block";
+      }
+      
+      loadNotice();
+
+      // 푸시 알림 초기화
+      if (window.PushManager) {
+        PushManager.init(db, user.uid);
+        PushManager.initPushBanner();
+        _updatePushUI();
+      }
+    } catch (err) { console.error(err); showToast('오류가 발생했습니다.', 'error'); }
+  });
+
+  // ✅ [버그수정] 공지 데이터 캐시 맵 (editNoticeById에서 사용)
+  const noticeDataMap = {};
+
+  function loadNotice() {
+    if (window.unsubscribeNotice) window.unsubscribeNotice();
+    window.unsubscribeNotice = db.collection("notice").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+      const sk = document.getElementById('noticeSkeleton');
+      if (sk) sk.remove();
+      const list = document.getElementById("noticeList");
+      list.innerHTML = "";
+      if (snapshot.empty) {
+        list.innerHTML = `<p data-i18n="noti_empty">공지사항이 없습니다.</p>`;
+        return;
+      }
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const id = doc.id;
+        // ✅ [버그수정] 공지 데이터 캐시에 저장
+        noticeDataMap[id] = data;
+        let actions = "";
+        if (myRole === "admin" || myRole === "manager") {
+          // ✅ [버그수정] data-* 속성으로 전달 → 백틱/특수문자 포함 데이터 안전 처리
+          actions = `<div class="notice-actions">
+            <span class="action-link" data-edit-id="${escapeHtml(id)}" onclick="editNoticeById(this)">수정</span>
+            <span class="action-link" style="color:#ff5252;" onclick="deleteNotice('${escapeHtml(id)}')">삭제</span>
+          </div>`;
+        }
+        // ✅ [버그수정] escapeHtml 적용으로 XSS 방지
+        const lang = localStorage.getItem('roider_lang') || 'ko';
+        const dateStr = lang === 'ko'
+          ? formatNoticeDate(data.createdAt || data.updatedAt)
+          : formatNoticeDateEN(data.createdAt || data.updatedAt);
+        const dateHtml = dateStr
+          ? `<span style="margin-left:10px; color:#666;">· ${escapeHtml(dateStr)}</span>`
+          : '';
+        // 수정됨 표시 (updatedAt이 createdAt보다 나중인 경우)
+        let editedBadge = '';
+        if (data.updatedAt && data.createdAt) {
+          try {
+            const updated = data.updatedAt.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt);
+            const created = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+            if (updated - created > 5000) { // 5초 이상 차이면 수정됨
+              editedBadge = `<span style="font-size:10px; color:#888; margin-left:6px;">(수정됨)</span>`;
+            }
+          } catch(e) { console.warn('notice error:', e); }
+        }
+        list.innerHTML += `<div class="notice-card" data-notice-id="${escapeHtml(id)}">
+          <h3>${escapeHtml(data.title)}</h3>
+          <div style="font-size:12px; color:#aaa; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+            👤 ${escapeHtml(data.author)}${dateHtml}${editedBadge}
+          </div>
+          <div style="margin-top:15px; white-space:pre-wrap; line-height:1.7;">${linkify(data.content)}</div>
+        </div>`; 
+        // ✅ actions는 마지막에 별도 DOM으로 삽입 (escapeHtml 우회 방지)
+        if (actions) {
+          const card = list.lastElementChild;
+          const actionsDiv = document.createElement('div');
+          actionsDiv.innerHTML = actions;
+          card.insertBefore(actionsDiv.firstChild, card.firstChild);
+        }
+      });
+      if (typeof applyLanguage === 'function') applyLanguage();
+    });
+  }
+
+  function openModal() { 
+    document.getElementById("editId").value = "";
+    document.getElementById("noticeTitle").value = "";
+    document.getElementById("noticeContent").value = "";
+    document.getElementById("modalTitle").textContent = "공지사항 작성";
+    const infoEl = document.getElementById("noticeEditInfo");
+    if (infoEl) infoEl.style.display = 'none';
+    document.getElementById("noticeModal").style.display = "flex"; 
+  }
+  function closeModal() { document.getElementById("noticeModal").style.display = "none"; }
+
+  // ✅ [버그수정] data-edit-id 속성에서 id를 읽어 noticeDataMap에서 안전하게 데이터 가져옴
+  function editNoticeById(el) {
+    const id = el.getAttribute('data-edit-id');
+    const notice = noticeDataMap[id];
+    if (!notice) return;
+    document.getElementById("editId").value = id;
+    document.getElementById("noticeTitle").value = notice.title || '';
+    document.getElementById("noticeContent").value = notice.content || '';
+    document.getElementById("modalTitle").textContent = "공지사항 수정";
+    // 작성/수정 날짜 표시
+    const infoEl = document.getElementById("noticeEditInfo");
+    if (infoEl) {
+      const lang = localStorage.getItem('roider_lang') || 'ko';
+      const created = notice.createdAt ? formatNoticeDate(notice.createdAt) : '';
+      const updated = notice.updatedAt ? formatNoticeDate(notice.updatedAt) : '';
+      infoEl.textContent = lang === 'ko'
+        ? `작성: ${created}${updated && updated !== created ? '  |  수정: ' + updated : ''}`
+        : `Created: ${created}${updated && updated !== created ? '  |  Updated: ' + updated : ''}`;
+      infoEl.style.display = 'block';
+    }
+    document.getElementById("noticeModal").style.display = "flex";
+  }
+
+  async function deleteNotice(id) {
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    const ok = await showConfirm(
+      lang === 'ko' ? '이 공지사항을 삭제하시겠습니까?' : 'Delete this notice?',
+      { danger: true, icon: '🗑️',
+        okText: lang === 'ko' ? '삭제' : 'Delete',
+        cancelText: lang === 'ko' ? '취소' : 'Cancel' }
+    );
+    if (!ok) return;
+    try {
+      await db.collection("notice").doc(id).delete();
+      showToast(lang === 'ko' ? '공지사항이 삭제되었습니다.' : 'Notice deleted.', 'info');
+    } catch (e) {
+      showToast(lang === 'ko' ? '삭제에 실패했습니다.' : 'Delete failed.', 'error');
+    }
+  }
+
+  async function saveNotice() {
+    const id = document.getElementById("editId").value;
+    const title = document.getElementById("noticeTitle").value.trim();
+    const content = document.getElementById("noticeContent").value.trim();
+    const lang2 = localStorage.getItem('roider_lang') || 'ko';
+    if (!title || !content) {
+      showToast(lang2 === 'ko' ? '제목과 내용을 모두 입력해 주세요.' : 'Please fill in title and content.', 'warning');
+      return;
+    }
+    const noticeData = { title, content, author: myNickname, authorRole: myRole, authorUid: myUid, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    try {
+      if (id) { await db.collection("notice").doc(id).update(noticeData); }
+      else { noticeData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection("notice").add(noticeData); }
+      closeModal();
+      const langN = localStorage.getItem('roider_lang') || 'ko';
+      showToast(langN === 'ko' ? (id ? '공지사항이 수정되었습니다.' : '공지사항이 등록되었습니다! 📢') : (id ? 'Notice updated.' : 'Notice posted! 📢'), 'success');
+    } catch (e) {
+      const lang3 = localStorage.getItem('roider_lang') || 'ko';
+      showToast(lang3 === 'ko' ? '저장에 실패했습니다.' : 'Save failed.', 'error');
+    }
+  }
+
+
+  // ── 푸시 알림 토글 ─────────────────────────────────────────
+  async function togglePushNotification() {
+    const status = PushManager.getPermissionStatus();
+    if (status === 'granted' && localStorage.getItem('roider_push_enabled') === '1') {
+      // 구독 해제
+      const ok = await showConfirm('푸시 알림을 끄시겠습니까?', {
+        icon: '🔕', okText: '끄기', cancelText: '취소'
+      });
+      if (ok) { await PushManager.unsubscribe(); _updatePushUI(); }
+    } else {
+      // 구독 시작
+      const granted = await PushManager.requestPermission();
+      if (granted) _updatePushUI();
+    }
+  }
+
+  // ── 알림 버튼 상태 업데이트 ────────────────────────────────
+  function _updatePushUI() {
+    const dot  = document.getElementById('pushStatusDot');
+    const text = document.getElementById('pushToggleText');
+    const btn  = document.getElementById('pushToggleBtn');
+    if (!dot || !text) return;
+
+    const status  = PushManager.getPermissionStatus();
+    const enabled = localStorage.getItem('roider_push_enabled') === '1';
+    const isOn    = status === 'granted' && enabled;
+
+    dot.className  = 'push-status-dot ' + (isOn ? 'on' : 'off');
+    text.textContent = isOn ? '🔔 알림 켜짐' : '🔕 알림 켜기';
+    if (btn) btn.classList.toggle('active', isOn);
+  }
+
+  function logout() { auth.signOut().then(() => location.replace("login.html")); }
+</script>
+
+
+</body>
+</html>

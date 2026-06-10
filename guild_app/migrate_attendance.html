@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+     <link rel="stylesheet" href="header_standard.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Attendance Migration (Admin)</title>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<style>
+/* Header standardization */
+header { min-height: 60px; }
+header .user-box { align-items: center; }
+header .user-box img {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 1px solid #444 !important;
+}
+button.logout {
+  background: transparent !important;
+  border: 1px solid #555 !important;
+  color: #ccc !important;
+}
+</style>
+
+<style>
+body { background:#0f1015; color:#e6e6e6; font-family:Pretendard,system-ui; }
+.container { max-width:900px; margin:0 auto; padding:30px; }
+.card { background:#1c1f2a; border:1px solid #2a3242; border-radius:12px; padding:16px; margin-bottom:12px; }
+button { padding:10px 14px; border-radius:10px; border:1px solid #555; background:transparent; color:#ccc; cursor:pointer; }
+button.primary { border-color:#f4c430; color:#f4c430; }
+.log { white-space:pre-wrap; font-size:12px; opacity:.9; }
+</style>
+</head>
+<body>
+<header>
+    <div class="logo" id="appTitle">ROIDER</div>
+    <div class="user-box">
+      <img id="userPhoto" src="" alt="profile" />
+      <span id="userName">Loading...</span>
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+<div class="container">
+  <h1>출석 데이터 마이그레이션 (관리자 전용)</h1>
+  <div class="card">
+    <button class="primary" onclick="dryRun()">Dry-run (미리보기)</button>
+    <button class="primary" onclick="migrate()">실제 마이그레이션 실행</button>
+    <div id="log" class="log"></div>
+  </div>
+</div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCbqEcGsdSDBZs8PjiI05YRNEGupLf3nSc",
+  authDomain: "roider-guild-management.firebaseapp.com",
+  projectId: "roider-guild-management",
+  storageBucket: "roider-guild-management.firebasestorage.app",
+  messagingSenderId: "1012249034459",
+  appId: "1:1012249034459:web:ec0f821f29170446af96fe"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+auth.onAuthStateChanged(async (user)=>{
+  if(!user) location.replace("login.html");
+  const me = await db.collection("users").doc(user.uid).get();
+  if(!me.exists || me.data().role !== "admin") {
+    showToast('관리자만 접근 가능합니다.', 'warning');
+      setTimeout(() => location.replace('main.html'), 1500);
+    location.replace("main.html");
+  }
+});
+
+async function dryRun() {
+  const log = document.getElementById("log");
+  log.textContent = "Dry-run 시작...\n";
+  const days = await db.collection("attendance").get();
+  let count = 0;
+  for (const day of days.docs) {
+    const users = await day.ref.collection("users").get();
+    users.forEach(u=>{ count++; log.textContent += `${day.id} -> ${u.id}\n`; });
+  }
+  log.textContent += `\n총 레코드: ${count} (미리보기 완료)`;
+}
+
+async function migrate() {
+  const log = document.getElementById("log");
+  log.textContent = "마이그레이션 시작...\n";
+  const days = await db.collection("attendance").get();
+  let moved = 0;
+  for (const day of days.docs) {
+    const users = await day.ref.collection("users").get();
+    for (const u of users.docs) {
+      const v = u.data();
+      const ref = db.collection("attendance_logs").doc(u.id).collection("days").doc(day.id);
+      const exists = await ref.get();
+      if (!exists.exists) {
+        await ref.set({ laby: v.laby||0, duel: v.duel||0, date: day.id, migratedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        moved++;
+        log.textContent += `OK: ${day.id} -> ${u.id}\n`;
+      } else {
+        log.textContent += `SKIP(이미 존재): ${day.id} -> ${u.id}\n`;
+      }
+    }
+  }
+  log.textContent += `\n완료. 이동된 레코드: ${moved}`;
+}
+</script>
+</body>
+</html>

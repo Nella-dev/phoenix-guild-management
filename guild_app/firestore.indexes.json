@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "shared_formations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "formationMode",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

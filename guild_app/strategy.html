@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ROIDER 길드 - 작전 지도</title>
+  
+  <link rel="stylesheet" href="header_standard.css">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="i18n_added.js" defer></script>
+  <script src="calendar_patch.js" defer></script>
+  
+  <style>
+    body { margin: 0; background: radial-gradient(circle at top, #1b2333, #0f1015 60%); color: #e6e6e6; min-height: 100vh; font-family: 'Pretendard', sans-serif;   word-break: keep-all; overflow-wrap: break-word;
+  }
+    .wrap { max-width: 1000px; margin: 40px auto; padding: 20px; }
+    h2 { color: #f4c430; margin-top: 0; margin-bottom: 5px; font-weight: 800; }
+    /* ── 폴더 메뉴 ── */
+    .nav-folder-header { display:flex; align-items:center; justify-content:space-between; padding:14px 25px; color:#ccc; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.03); transition:background .2s,color .2s; user-select:none; font-size:15px; }
+    .nav-folder-header:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-folder-header.open { color:#f4c430; }
+    .nav-folder-title { display:flex; align-items:center; gap:8px; }
+    .nav-folder-arrow { font-size:10px; transition:transform .25s; color:#666; }
+    .nav-folder-header.open .nav-folder-arrow { transform:rotate(90deg); color:#f4c430; }
+    .nav-folder-children { overflow:hidden; max-height:0; transition:max-height .28s ease; background:rgba(0,0,0,.15); }
+    .nav-folder-children.open { max-height:300px; }
+    .nav-sub-link { display:block; font-size:14px; padding:11px 25px 11px 44px; color:#aaa; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.03); transition:background .15s,color .15s; }
+    .nav-sub-link:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-sub-link.active { color:#f4c430; background:rgba(244,196,48,.08); font-weight:600; }
+    
+    .card { background: #1c1f2a; border-radius: 12px; padding: 20px; border: 1px solid #2a3242; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-top: 20px; }
+    
+    /* 지도 컨테이너 (사용자 원본) */
+    .map-container { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: clamp(200px, 40vw, 500px); display: flex; align-items: center; justify-content: center; border: 1px solid #444; }
+    #mapImage { width: 100%; display: none; }
+    
+    /* 그리드 레이어 (사용자 원본) */
+    .grid-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: grid; pointer-events: none; }
+    .grid-cell { border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(255,255,255,0.5); pointer-events: auto; cursor: pointer; transition: 0.2s; position: relative; }
+    .grid-cell.active { background: rgba(244, 196, 48, 0.4); border: 2px solid #f4c430; color: #fff; font-weight: bold; z-index: 10; }
+    .grid-cell .cell-info { position: absolute; bottom: 2px; right: 2px; font-size: 9px; opacity: 0.8; }
+    
+    /* 컨트롤러 (사용자 원본) */
+    .controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+    .controls button { background: #2a3242; color: #eee; border: 1px solid #444; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+    .controls button.active { background: #f4c430; color: #000; border-color: #f4c430; font-weight: bold; }
+    
+    /* 모달 (사용자 원본) */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    .modal-content { background: #1c1f2a; width: 90%; max-width: 400px; padding: 30px; border-radius: 20px; border: 1px solid #2a3242; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+
+    /* ── strategy.html 반응형 ────────────────────────── */
+    @media (max-width: 850px) {
+      .menu-trigger { display: block !important; }
+    }
+    @media (max-width: 600px) {
+      .main-content { padding: 15px 10px; }
+      .wrap { padding: 10px; margin: 10px auto; }
+
+      /* 전략 맵 컨테이너 비율 유지 */
+      .map-container {
+        min-height: 220px !important;
+        border-radius: 6px;
+      }
+
+      /* 그리드 셀 폰트 축소 */
+      .grid-cell { font-size: 8px !important; }
+      .grid-cell .cell-info { font-size: 7px !important; }
+
+      /* 컨트롤 버튼 영역 */
+      .controls {
+        gap: 6px !important;
+        flex-wrap: wrap !important;
+      }
+      .controls button {
+        padding: 10px 12px !important;
+        font-size: 12px !important;
+        min-height: 40px;
+      }
+
+      /* 선봉대 입력 */
+      #vanguardInput {
+        width: 100px !important;
+        font-size: 16px !important;  /* iOS 줌 방지 */
+      }
+
+      /* 그리드 수 입력 */
+      #gridCols, #gridRows {
+        font-size: 16px !important;  /* iOS 줌 방지 */
+        width: 48px !important;
+      }
+
+      /* 모달 */
+      .modal-content { padding: 20px 16px !important; }
+    }
+
+    @media (max-width: 400px) {
+      .map-container { min-height: 180px !important; }
+      .controls button { padding: 8px 10px !important; font-size: 11px !important; }
+    }
+
+    /* ── 프로필 변경 버튼 ── */
+    .profile-change-btn {
+      display: block;
+      width: 100%;
+      margin: 6px 0 4px 0;
+      padding: 5px 0;
+      background: rgba(244,196,48,0.12);
+      color: #f4c430;
+      border: 1px solid rgba(244,196,48,0.35);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: 0.3px;
+      transition: background 0.15s;
+    }
+    .profile-change-btn:hover { background: rgba(244,196,48,0.22); }
+  </style>
+</head>
+<body>
+
+  <header>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
+  <div class="user-box">
+    <img id="userPhoto" src="" alt="profile" />
+      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+    <span id="userName">...</span>
+    <span id="myRoleBadge" class="my-role-badge" style="display:none;"></span>
+    <button class="logout-btn" id="langBtn" onclick="handleLangChange()">🌐 KO</button>
+    <button class="logout-btn" data-i18n="menu_logout" onclick="logout()">로그아웃</button>
+  </div>
+</header>
+
+<nav>
+      <div class="nav-container">
+      <a href="main.html" class="nav-link" data-i18n="menu_home">홈</a>
+      <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+
+      <!-- 주간 컨텐츠 기록부 폴더 -->
+      <div class="nav-folder">
+        <div class="nav-folder-header" id="navFolderWeekly">
+          <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+          <span class="nav-folder-arrow">▶</span>
+        </div>
+        <div class="nav-folder-children" id="navFolderWeeklyChildren">
+          <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+          <a href="weekly.html" class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+          <a href="history.html" class="nav-sub-link" data-i18n="menu_history">📜 결산 내역</a>
+        </div>
+      </div>
+
+      <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+      <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+    </div>
+  <script>
+  (function(){
+    var FOLDER_KEY = 'roider_nav_weekly_open';
+    var header   = document.getElementById('navFolderWeekly');
+    var children = document.getElementById('navFolderWeeklyChildren');
+    if (!header || !children) return;
+
+    var path = window.location.pathname;
+    var isInFolder = path.includes('attendance.html') || path.includes('weekly.html') || path.includes('history.html');
+    var hasActive  = children.querySelector('.nav-sub-link.active');
+    var saved      = localStorage.getItem(FOLDER_KEY);
+    var shouldOpen = isInFolder || !!hasActive || saved === '1';
+
+    function setOpen(open) {
+      header.classList.toggle('open', open);
+      children.classList.toggle('open', open);
+      localStorage.setItem(FOLDER_KEY, open ? '1' : '0');
+    }
+    setOpen(shouldOpen);
+
+    header.addEventListener('click', function(e){
+      e.stopPropagation();
+      setOpen(!header.classList.contains('open'));
+    });
+  })();
+  </script>
+</nav>
+
+  <div class="wrap">
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+      <div>
+        <h2 data-i18n="stra_title">🗺️ 길드전 작전지도</h2>
+        <p id="vanguardText" style="margin:0; font-size:14px; color:#00b0ff; font-weight:bold;"></p>
+      </div>
+      <div id="adminControls" style="display:none;">
+        <button onclick="document.getElementById('fileInput').click()" style="background:#00b0ff; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">지도 업로드</button>
+        <input type="file" id="fileInput" hidden onchange="handleImageUpload(event)">
+        <button onclick="saveStrategy()" style="background:#f4c430; color:black; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer; margin-left:5px;">작전 저장</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="controls" id="gridSettings" style="display:none;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="Npx; opacity:0.8;">그리드:</span>
+          <input type="number" id="gridCols" value="10" style="width:45px; background:#0f1015; color:white; border:1px solid #444; border-radius:4px; padding:4px; text-align:center;">
+          <span style="opacity:0.5;">x</span>
+          <input type="number" id="gridRows" value="10" style="width:45px; background:#0f1015; color:white; border:1px solid #444; border-radius:4px; padding:4px; text-align:center;">
+          <button onclick="applyGrid()" style="padding:4px 10px; background:#444; border:none; color:#fff; border-radius:4px; margin-left:5px;">적용</button>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:10px;">
+          <input type="text" id="vanguardInput" placeholder="선봉대 명칭" style="background:#0f1015; color:#fff; border:1px solid #444; padding:5px 10px; border-radius:6px; font-size: 16px; width:120px;">
+        </div>
+      </div>
+
+      <div class="map-container" id="mapWrapper">
+        <p id="emptyMapText" style="opacity:0.4;" data-i18n="stra_empty">등록된 지도가 없습니다.</p>
+        <img id="mapImage" src="">
+        <div id="gridOverlay" class="grid-overlay"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cellModal" class="modal">
+    <div class="modal-content">
+      <h3 id="cellTitle" style="color:#f4c430; margin-top:0;">셀 설정</h3>
+      <div style="margin-bottom:15px;">
+        <label style="font-size:12px; opacity:0.6;">할당 인원 수</label>
+        <input type="number" id="cellCount" style="width:100%; background:#0f1015; border:1px solid #2a3242; color:#fff; padding:12px; border-radius:8px; margin-top:5px; box-sizing:border-box;">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button onclick="document.getElementById('cellModal').style.display='none'" style="flex:1; padding:12px; border-radius:8px; background:#444; color:#eee; border:none; cursor:pointer;">취소</button>
+        <button onclick="confirmCellSetting()" style="flex:1; padding:12px; border-radius:8px; background:#f4c430; color:#000; border:none; font-weight:bold; cursor:pointer;">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let myRole, currentStrategy = { cols:10, rows:10, activeCells:{}, mapImageBase64: "", vanguard: "" };
+    let selectedCellIdx = null;
+
+    auth.onAuthStateChanged(async user => {
+      const ol = document.getElementById('loadingOverlay');
+      if (ol) ol.style.display = 'none';
+      if (!user) return location.replace('login.html');
+      const snap = await db.collection("users").doc(user.uid).get();
+      const data = snap.data();
+      if (data.role === "pending") return location.replace("pending.html");
+
+      document.getElementById("userName").textContent = data.nickname;
+      document.getElementById("userPhoto").src = data.customPhotoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nickname)}&background=2a3242&color=f4c430&bold=true`;
+      
+      if (data.role === "admin" || data.role === "manager") {
+        myRole = data.role;
+        document.getElementById("navAdminMenu").style.display = "inline-block";
+        document.getElementById("adminControls").style.display = "block";
+        document.getElementById("gridSettings").style.display = "flex";
+        const badge = document.getElementById("myRoleBadge");
+        badge.textContent = data.role.toUpperCase();
+        badge.style.display = "inline-block";
+        badge.className = `role-badge role-${data.role.toUpperCase()}`;
+      }
+      loadStrategy();
+      if (typeof checkNoticeBadge === 'function') checkNoticeBadge(db, user.uid);
+    });
+
+    async function loadStrategy() {
+      const doc = await db.collection("guild_strategy").doc("main_order").get();
+      if (doc.exists) {
+        currentStrategy = doc.data();
+        if (!currentStrategy.activeCells || Array.isArray(currentStrategy.activeCells)) currentStrategy.activeCells = {};
+        if (currentStrategy.mapImageBase64) {
+          document.getElementById("mapImage").src = currentStrategy.mapImageBase64;
+          document.getElementById("mapImage").style.display = "block";
+          document.getElementById("emptyMapText").style.display = "none";
+        }
+        document.getElementById("vanguardText").textContent = currentStrategy.vanguard ? `🛡️ ${currentStrategy.vanguard}` : "";
+        document.getElementById("vanguardInput").value = currentStrategy.vanguard || "";
+        document.getElementById("gridCols").value = currentStrategy.cols;
+        document.getElementById("gridRows").value = currentStrategy.rows;
+        renderGrid();
+      }
+    }
+
+    function renderGrid() {
+      const overlay = document.getElementById("gridOverlay");
+      overlay.style.gridTemplateColumns = `repeat(${currentStrategy.cols}, 1fr)`;
+      overlay.style.gridTemplateRows = `repeat(${currentStrategy.rows}, 1fr)`;
+      overlay.innerHTML = "";
+      for (let i = 0; i < currentStrategy.cols * currentStrategy.rows; i++) {
+        const cell = document.createElement("div");
+        const cellData = currentStrategy.activeCells[i];
+        cell.className = "grid-cell" + (cellData ? " active" : "");
+        if (cellData) cell.innerHTML = `<span class="cell-info">${cellData.count}</span>`;
+        
+        cell.onclick = () => {
+          if (myRole !== "admin" && myRole !== "manager") return;
+          selectedCellIdx = i;
+          if (currentStrategy.activeCells[i]) {
+            if (confirm("이 셀의 작전을 취소할까요?")) {
+              delete currentStrategy.activeCells[i];
+              renderGrid();
+            } else { openCellModal(i); }
+          } else { openCellModal(i); }
+        };
+        overlay.appendChild(cell);
+      }
+    }
+
+    function openCellModal(idx) {
+      selectedCellIdx = idx;
+      document.getElementById("cellCount").value = currentStrategy.activeCells[idx]?.count || "";
+      document.getElementById("cellModal").style.display = "flex";
+    }
+
+    function confirmCellSetting() {
+      const count = document.getElementById("cellCount").value;
+      if (!count) { showToast('인원 수를 입력하세요.', 'warning'); return; }
+      currentStrategy.activeCells[selectedCellIdx] = { count: Number(count) };
+      document.getElementById("cellModal").style.display = "none";
+      renderGrid();
+    }
+
+    // 🔥 사용자 원본: 이미지 리사이징 및 압축 로직 (100% 보존)
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1000;
+          let width = img.width, height = img.height;
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // 압축률 0.7 적용
+          currentStrategy.mapImageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          document.getElementById("mapImage").src = currentStrategy.mapImageBase64;
+          document.getElementById("mapImage").style.display = "block";
+          document.getElementById("emptyMapText").style.display = "none";
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function saveStrategy() {
+      currentStrategy.vanguard = document.getElementById("vanguardInput").value;
+      try {
+        await db.collection("guild_strategy").doc("main_order").set(currentStrategy);
+        showToast('✅ 작전이 저장되었습니다!', 'success');
+        setTimeout(() => location.reload(), 1400);
+      } catch (e) {
+        showToast('저장 실패: ' + e.message, 'error');
+        console.error('strategy save error:', e);
+      }
+    }
+
+    function applyGrid() {
+      currentStrategy.cols = Number(document.getElementById("gridCols").value);
+      currentStrategy.rows = Number(document.getElementById("gridRows").value);
+      currentStrategy.activeCells = {};
+      renderGrid();
+    }
+
+    async function logout() {
+      const ok = await showConfirm('로그아웃 하시겠습니까?', { icon: '🚪', okText: '로그아웃', cancelText: '취소' });
+      if (ok) auth.signOut().then(() => location.href = 'login.html');
+    }
+
+    function handleLangChange() {
+      if (typeof window.openLangDropdown === 'function') {
+        window.openLangDropdown();
+      } else if (typeof window.toggleLanguage === 'function') {
+        window.toggleLanguage();
+      }
+    }
+  </script>
+
+  <!-- 로딩 오버레이 -->
+  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
+    <div class="loading-spinner"></div>
+    <span class="loading-text" style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">ROIDER GUILD</span>
+  </div>
+
+
+</body>
+</html>
