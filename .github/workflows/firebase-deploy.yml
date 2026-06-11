@@ -1,0 +1,40 @@
+name: Firebase Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Firebase Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: guild_app/functions/package-lock.json
+
+      - name: Install Functions dependencies
+        run: |
+          cd guild_app/functions
+          npm ci --production
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase
+        run: |
+          cd guild_app
+          firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
