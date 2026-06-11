@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <!-- DNS Prefetch & Preconnect for performance -->
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -24,7 +24,7 @@
   <script>window.isLoginPage = true;</script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <!-- Discord OAuth 설정 (배포 시 실제 값으로 교체) -->
+  <!-- Discord OAuth config -->
   <script src="discord_config.js"></script>
 
   <style>
@@ -44,7 +44,7 @@
       padding: 16px;
     }
 
-    /* ── 카드 ── */
+    /* ── Card ── */
     .card {
       background: #1c1f2a;
       padding: 40px 36px;
@@ -67,7 +67,7 @@
     h2 { margin: 0 0 6px; color: #f4c430; font-size: 22px; font-weight: 800; }
     .subtitle { color: #8892b0; margin: 0 0 32px; font-size: 14px; }
 
-    /* ── 구분선 ── */
+    /* ── Divider ── */
     .divider {
       display: flex;
       align-items: center;
@@ -83,7 +83,7 @@
       background: #2a3242;
     }
 
-    /* ── 로그인 버튼 공통 ── */
+    /* ── Login buttons ── */
     .login-btn {
       display: flex;
       align-items: center;
@@ -119,7 +119,7 @@
     }
     .btn-discord:hover { background: #4752c4; }
 
-    /* 로딩 상태 */
+    /* Loading state */
     #loginLoading {
       display: none;
       margin-top: 18px;
@@ -129,59 +129,56 @@
     }
     @keyframes pulse { 0%,100%{opacity:.7} 50%{opacity:1} }
 
-    /* 안내 텍스트 */
+    /* Hint text */
     .hint {
       margin-top: 24px;
       font-size: 12px;
       color: #4a5568;
       line-height: 1.6;
     }
-
-    /* 텍스트 줄바꿈 */
-    .notice-card, .user-card, .info-text, td, th { word-break: keep-all; overflow-wrap: break-word; }
   </style>
 </head>
 <body>
   <div class="card">
-    <!-- 길드 아이콘 -->
+    <!-- Guild icon -->
     <img src="assets/icon-192.png" onerror="this.style.display='none'" class="guild-icon" alt="Phoenix Guild">
 
     <h2>AFK Journey: Homestead</h2>
     <p class="subtitle">Phoenix Guild Management</p>
 
-    <!-- ① Google 로그인 -->
+    <!-- ① Google Sign-In -->
     <button class="login-btn btn-google" id="btnGoogle" onclick="loginGoogle()">
-      <!-- Google G 로고 SVG -->
+      <!-- Google G logo SVG -->
       <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       </svg>
-      Google로 로그인
+      Sign in with Google
     </button>
 
-    <div class="divider">또는</div>
+    <div class="divider">or</div>
 
-    <!-- ② Discord 로그인 -->
+    <!-- ② Discord Sign-In -->
     <button class="login-btn btn-discord" id="btnDiscord" onclick="loginDiscord()">
-      <!-- Discord 로고 SVG -->
+      <!-- Discord logo SVG -->
       <svg width="22" height="16" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M60.1 4.9A58.6 58.6 0 0 0 45.5 0c-.6 1.2-1.4 2.7-1.9 4a54 54 0 0 0-16.3 0C26.8 2.7 26 1.2 25.3 0A58.5 58.5 0 0 0 10.7 5C1.5 18.6-.9 31.9.3 45a59 59 0 0 0 18 9.1c1.5-2 2.8-4.1 3.9-6.4a38.3 38.3 0 0 1-6.1-3c.5-.4 1-.7 1.5-1.1a42 42 0 0 0 35.8 0c.5.4 1 .7 1.5 1.1a38.3 38.3 0 0 1-6.1 3c1.1 2.3 2.4 4.4 3.9 6.4A58.8 58.8 0 0 0 70.7 45C72.1 30 68.3 16.8 60.1 4.9ZM23.7 36.8c-3.5 0-6.4-3.2-6.4-7.1 0-3.9 2.8-7.1 6.4-7.1 3.5 0 6.4 3.2 6.3 7.1 0 3.9-2.8 7.1-6.3 7.1Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.1 0-3.9 2.8-7.1 6.4-7.1 3.5 0 6.4 3.2 6.3 7.1 0 3.9-2.8 7.1-6.3 7.1Z" fill="white"/>
       </svg>
-      Discord로 로그인
+      Sign in with Discord
     </button>
 
-    <div id="loginLoading">⏳ 로그인 처리 중...</div>
+    <div id="loginLoading">⏳ Signing in...</div>
 
     <p class="hint">
-      Discord 로그인 시 서버 닉네임이<br>자동으로 인게임 닉네임 후보로 제안됩니다.
+      Discord login automatically suggests your<br>server nickname as your in-game name.
     </p>
   </div>
 
   <script>
   // ══════════════════════════════════════════════════
-  //  Google 로그인 (기존 방식 유지)
+  //  Google Sign-In
   // ══════════════════════════════════════════════════
   async function loginGoogle() {
     const btn = document.getElementById('btnGoogle');
@@ -192,61 +189,59 @@
     provider.addScope('profile');
 
     try {
-      console.log('[Login] Google signInWithPopup 시도...');
+      console.log('[Login] Google signInWithPopup...');
       await auth.signInWithPopup(provider);
-      // 성공 → firebase_config.js onAuthStateChanged가 페이지 이동 처리
+      // Success → firebase_config.js onAuthStateChanged handles redirect
     } catch (error) {
       console.error('[Login] Google Error:', error.code, error.message);
       setLoading(btn, false);
 
       if (error.code === 'auth/popup-blocked') {
-        showToast('팝업이 차단되었습니다. 잠시 후 리다이렉트로 재시도합니다.', 'warning');
+        showToast('Popup blocked. Retrying with redirect...', 'warning');
         setTimeout(async () => {
           try { await auth.signInWithRedirect(provider); }
-          catch(e) { showToast('로그인 실패. 잠시 후 다시 시도해 주세요.', 'error'); }
+          catch(e) { showToast('Sign-in failed. Please try again.', 'error'); }
         }, 1500);
       } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-        showToast('로그인 오류: ' + (error.message || error.code), 'error');
+        showToast('Sign-in error: ' + (error.message || error.code), 'error');
       }
     }
   }
 
   // ══════════════════════════════════════════════════
-  //  Discord 로그인
-  //  흐름: 팝업 열기 → discord_callback.html에서 code 수신
-  //        → discordExchangeToken CF 호출 → signInWithCustomToken
+  //  Discord Sign-In
+  //  Flow: open popup → discord_callback.html sends code
+  //        → discordExchangeToken CF → signInWithCustomToken
   // ══════════════════════════════════════════════════
   let _discordPopup = null;
   let _discordMsgHandler = null;
 
   function loginDiscord() {
-    // discord_config.js 에서 DISCORD_CLIENT_ID, DISCORD_REDIRECT_URI 참조
-    const clientId   = window.DISCORD_CLIENT_ID;
+    const clientId    = window.DISCORD_CLIENT_ID;
     const redirectUri = window.DISCORD_REDIRECT_URI;
 
     if (!clientId || clientId === 'YOUR_DISCORD_CLIENT_ID') {
-      showToast('Discord 앱 설정이 필요합니다. 관리자에게 문의하세요.', 'warning');
+      showToast('Discord app not configured. Please contact an admin.', 'warning');
       return;
     }
 
     const btn = document.getElementById('btnDiscord');
     setLoading(btn, true);
 
-    // CSRF 방지용 state 값 생성
+    // CSRF state
     const state = Math.random().toString(36).slice(2);
     sessionStorage.setItem('discord_oauth_state', state);
 
-    // Discord OAuth2 인증 URL
-    const scope = 'identify guilds.members.read';
+    const scope  = 'identify guilds.members.read';
     const authUrl = `https://discord.com/oauth2/authorize` +
       `?client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=code` +
       `&scope=${encodeURIComponent(scope)}` +
       `&state=${state}` +
-      `&prompt=none`;   // 이미 인증된 경우 재확인 생략
+      `&prompt=none`;
 
-    // ── 팝업 열기 ──
+    // ── Open popup ──
     const w = 480, h = 700;
     const left = Math.round(window.screenX + (window.outerWidth  - w) / 2);
     const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
@@ -254,18 +249,16 @@
       `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`);
 
     if (!_discordPopup) {
-      // 팝업 차단 → redirect 폴백
-      showToast('팝업이 차단되었습니다. 새 탭으로 이동합니다.', 'warning');
+      showToast('Popup blocked. Opening in new tab...', 'warning');
       setLoading(btn, false);
       sessionStorage.setItem('discord_redirect_pending', '1');
       location.href = authUrl.replace('_discordPopup', '_blank');
       return;
     }
 
-    // ── 팝업 → 부모창 메시지 수신 ──
+    // ── Receive message from popup ──
     if (_discordMsgHandler) window.removeEventListener('message', _discordMsgHandler);
     _discordMsgHandler = async (evt) => {
-      // 보안: 출처 확인 (같은 origin만 허용)
       if (evt.origin !== location.origin) return;
       if (!evt.data || evt.data.type !== 'DISCORD_OAUTH_CODE') return;
 
@@ -275,16 +268,16 @@
       const { code, state: retState, error: oauthError } = evt.data;
 
       if (oauthError) {
-        showToast('Discord 인증이 취소되었습니다.', 'warning');
+        showToast('Discord authorization cancelled.', 'warning');
         setLoading(btn, false);
         return;
       }
 
-      // CSRF state 검증
+      // CSRF state check
       const savedState = sessionStorage.getItem('discord_oauth_state');
       sessionStorage.removeItem('discord_oauth_state');
       if (retState !== savedState) {
-        showToast('보안 오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+        showToast('Security error. Please try again.', 'error');
         setLoading(btn, false);
         return;
       }
@@ -293,7 +286,7 @@
     };
     window.addEventListener('message', _discordMsgHandler);
 
-    // 팝업 닫힘 감지 (사용자가 직접 닫은 경우)
+    // Detect popup closed by user
     const pollTimer = setInterval(() => {
       if (_discordPopup && _discordPopup.closed) {
         clearInterval(pollTimer);
@@ -306,79 +299,69 @@
     }, 500);
   }
 
-  // ── Discord code → Firebase 로그인 처리 ──────────────────────────────
+  // ── Discord code → Firebase sign-in ──────────────────────────────
   async function handleDiscordCode(code, btn) {
-    document.getElementById('loginLoading').textContent = '⏳ Discord 인증 처리 중...';
+    document.getElementById('loginLoading').textContent = '⏳ Verifying Discord...';
 
     try {
-      // Cloud Function 호출: discordExchangeToken
-      // GitHub Pages 환경에서는 리전을 명시해야 함 (asia-northeast3 = 서울)
       const fn = firebase.app().functions('asia-northeast3').httpsCallable('discordExchangeToken');
       const result = await fn({ code });
 
       const { customToken, discordUser } = result.data;
 
-      document.getElementById('loginLoading').textContent = '⏳ Firebase 로그인 중...';
+      document.getElementById('loginLoading').textContent = '⏳ Signing in to Firebase...';
 
-      // Firebase Custom Token으로 로그인
       await auth.signInWithCustomToken(customToken);
 
-      // Discord 정보를 sessionStorage에 임시 저장 (nickname.html에서 참조)
       sessionStorage.setItem('discord_user', JSON.stringify(discordUser));
 
-      // firebase_config.js onAuthStateChanged가 페이지 이동 처리
-      console.log('[Discord] 로그인 성공:', discordUser.username, '| 서버닉:', discordUser.serverNick);
+      console.log('[Discord] Sign-in success:', discordUser.username, '| server nick:', discordUser.serverNick);
 
     } catch (e) {
       console.error('[Discord] handleDiscordCode error:', e);
-      console.error('[Discord] error details:', JSON.stringify({
-        code: e.code, message: e.message, details: e.details
-      }));
       setLoading(btn, false);
-      // 오류 코드별 친절한 메시지
-      let msg = e.message || e.code || '알 수 없는 오류';
+      let msg = e.message || e.code || 'Unknown error';
       if (e.code === 'functions/internal') {
-        msg = 'Discord 서버 연결 오류입니다. 잠시 후 다시 시도해 주세요.';
+        msg = 'Discord server connection error. Please try again.';
       } else if (e.code === 'functions/failed-precondition') {
-        msg = 'Discord 앱 설정이 완료되지 않았습니다. 관리자에게 문의하세요.';
+        msg = 'Discord app not configured. Please contact an admin.';
       } else if (e.code === 'functions/unauthenticated') {
-        msg = 'Discord 인증에 실패했습니다. 다시 시도해 주세요.';
+        msg = 'Discord authentication failed. Please try again.';
       }
-      showToast('❌ Discord 로그인 실패: ' + msg, 'error');
+      showToast('❌ Discord sign-in failed: ' + msg, 'error');
     }
   }
 
-  // ── 버튼 로딩 상태 토글 ────────────────────────────────────────────────
+  // ── Button loading toggle ──────────────────────────────────────────
   function setLoading(btn, on) {
     const loadingEl = document.getElementById('loginLoading');
     if (on) {
       btn.disabled = true;
       loadingEl.style.display = 'block';
-      loadingEl.textContent   = '⏳ 로그인 처리 중...';
+      loadingEl.textContent   = '⏳ Signing in...';
     } else {
       btn.disabled = false;
       loadingEl.style.display = 'none';
     }
   }
 
-  // ── redirect 방식 콜백 처리 (팝업 차단 시 discord_callback → login.html으로 돌아옴) ──
+  // ── Redirect fallback (popup blocked → discord_callback → login.html) ──
   window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(location.search);
-    // discord_callback.html이 discord_code / discord_state 파라미터로 넘겨줌
     const code  = urlParams.get('discord_code');
     const state = urlParams.get('discord_state');
     const err   = urlParams.get('discord_error');
 
-    if (!code && !err) return;  // Discord 콜백이 아님
+    if (!code && !err) return;
 
-    history.replaceState({}, '', location.pathname); // URL에서 파라미터 제거
+    history.replaceState({}, '', location.pathname);
     const btn = document.getElementById('btnDiscord');
     setLoading(btn, true);
 
     if (err) {
       const msg = err === 'access_denied'
-        ? 'Discord 로그인이 취소되었습니다.'
-        : 'Discord 인증 오류: ' + err;
+        ? 'Discord sign-in was cancelled.'
+        : 'Discord auth error: ' + err;
       showToast(msg, 'warning');
       setLoading(btn, false);
       return;
@@ -387,7 +370,7 @@
     const savedState = sessionStorage.getItem('discord_oauth_state');
     sessionStorage.removeItem('discord_oauth_state');
     if (state && savedState && state !== savedState) {
-      showToast('보안 오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+      showToast('Security error. Please try again.', 'error');
       setLoading(btn, false);
       return;
     }

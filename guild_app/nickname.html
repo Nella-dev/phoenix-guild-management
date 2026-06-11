@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <!-- DNS Prefetch & Preconnect for performance -->
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -13,54 +13,100 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Phoenix 길드 - 닉네임 설정</title>
+  <title>Phoenix Guild – Set Nickname</title>
 
   <link rel="stylesheet" href="header_standard.css">
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  
+
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <script src="i18n.js"></script>
-  <script src="i18n_added.js"></script>
 
   <style>
-    body { 
-      margin: 0; 
-      background: radial-gradient(circle at top, #1b2333, #0f1015 60%); 
-      color: #eee; 
-      display: flex; 
+    /* ── Page layout ── */
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1b2333, #0f1015 60%);
+      color: #eee;
+      display: flex;
       flex-direction: column;
       min-height: 100vh;
-      min-height: 100dvh; /* ✅ 모바일 주소창 대응 */
-      font-family: system-ui, -apple-system, sans-serif; 
+      min-height: 100dvh;
+      font-family: system-ui, -apple-system, sans-serif;
     }
 
-    /* 중앙 정렬 컨테이너 */
+    /* ── Header overrides (nickname page has no sidebar) ── */
+    header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      padding: 0 15px !important;
+      background: #0d1117 !important;
+      border-bottom: 1px solid #2a3242 !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1000 !important;
+      height: 100px !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+    }
+    @media (max-width: 850px) { header { height: 80px !important; } }
+    @media (max-width: 500px) { header { height: 68px !important; } }
+    @media (max-width: 360px) { header { height: 60px !important; } }
+
+    /* ── User chip (top-right) ── */
+    .header-user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid #2a3242;
+      border-radius: 30px;
+      padding: 5px 12px 5px 6px;
+      z-index: 2;
+    }
+    .header-user-chip img {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #f4c43055;
+    }
+    .header-user-chip span {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ccc;
+      max-width: 120px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Centre container ── */
     .container {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 28px 16px;
     }
 
-    .card { 
-      background: #1c1f2a; 
-      padding: 40px 30px; 
-      border-radius: 20px; 
-      text-align: center; 
+    /* ── Card ── */
+    .card {
+      background: #1c1f2a;
+      padding: 40px 30px;
+      border-radius: 20px;
+      text-align: center;
       width: 100%;
-      max-width: 360px; 
+      max-width: 380px;
       border: 1px solid #2a3242;
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
 
-    h2 { 
-      color: #f4c430; 
-      margin-top: 0; 
+    h2 {
+      color: #f4c430;
+      margin-top: 0;
       font-weight: 800;
       margin-bottom: 10px;
     }
@@ -69,28 +115,27 @@
       color: #aaa;
       font-size: 14px;
       margin-bottom: 25px;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
+    /* ── Input group ── */
     .input-group {
       margin-bottom: 20px;
       text-align: left;
     }
-
     .input-group label {
       display: block;
-      font-size: 16px;
+      font-size: 14px;
       color: #f4c430;
       margin-bottom: 8px;
       font-weight: 600;
       padding-left: 4px;
     }
-
-    input { 
-      width: 100%; 
-      padding: 14px; 
-      border-radius: 10px; 
-      border: 1px solid #333; 
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
       background: #0f1015;
       color: #fff;
       font-size: 16px;
@@ -98,36 +143,26 @@
       outline: none;
       transition: border-color 0.2s;
     }
+    input:focus { border-color: #f4c430; }
 
-    input:focus {
-      border-color: #f4c430;
-    }
-
-    button.btn-save { 
+    /* ── Save button ── */
+    button.btn-save {
       width: 100%;
       padding: 15px;
       border-radius: 10px;
       border: none;
-      background: #f4c430; 
+      background: #f4c430;
       color: #111;
-      font-weight: 800; 
+      font-weight: 800;
       font-size: 16px;
-      cursor: pointer; 
+      cursor: pointer;
       transition: transform 0.1s, background 0.2s;
     }
+    button.btn-save:hover   { background: #e5b82d; }
+    button.btn-save:active  { transform: scale(0.98); }
+    button.btn-save:disabled { opacity: 0.55; pointer-events: none; }
 
-    button.btn-save:hover {
-      background: #e5b82d;
-    }
-
-    button.btn-save:active {
-      transform: scale(0.98);
-    }
-
-    /* 텍스트 줄바꿈 - 긴 닉네임/URL 삐져나옴 방지 */
-    .notice-card, .user-card, .info-text, td, th { word-break: keep-all; overflow-wrap: break-word; }
-
-    /* ── Discord 자동완성 배너 ── */
+    /* ── Discord suggestion banner ── */
     .discord-suggestion {
       display: none;
       background: linear-gradient(135deg, #3c4270, #2b2f54);
@@ -156,15 +191,8 @@
       border: 2px solid #5865F2;
       flex-shrink: 0;
     }
-    .discord-suggestion .ds-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .discord-suggestion .ds-label {
-      font-size: 11px;
-      color: #8892b0;
-      margin-bottom: 2px;
-    }
+    .discord-suggestion .ds-info { flex: 1; min-width: 0; }
+    .discord-suggestion .ds-label { font-size: 11px; color: #8892b0; margin-bottom: 2px; }
     .discord-suggestion .ds-name {
       font-size: 14px;
       font-weight: 700;
@@ -183,11 +211,7 @@
       border-radius: 20px;
       margin-top: 4px;
     }
-    .discord-suggestion .ds-btns {
-      display: flex;
-      gap: 8px;
-      margin-top: 2px;
-    }
+    .discord-suggestion .ds-btns { display: flex; gap: 8px; margin-top: 2px; }
     .discord-suggestion .ds-btn {
       flex: 1;
       padding: 8px;
@@ -199,14 +223,8 @@
       transition: opacity 0.15s;
     }
     .discord-suggestion .ds-btn:hover { opacity: 0.85; }
-    .discord-suggestion .ds-btn-apply {
-      background: #5865F2;
-      color: #fff;
-    }
-    .discord-suggestion .ds-btn-skip {
-      background: #2a3242;
-      color: #8892b0;
-    }
+    .discord-suggestion .ds-btn-apply { background: #5865F2; color: #fff; }
+    .discord-suggestion .ds-btn-skip  { background: #2a3242; color: #8892b0; }
     .discord-suggestion .ds-close {
       position: absolute;
       top: 10px; right: 12px;
@@ -214,70 +232,117 @@
       color: #4a5568; font-size: 16px;
       cursor: pointer; line-height: 1;
     }
+
+    /* ── Loading overlay ── */
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,16,21,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #2a3242;
+      border-top-color: #f4c430;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { margin-top: 16px; color: #f4c430; font-size: 14px; letter-spacing: 1px; }
   </style>
 </head>
 <body>
 
+  <!-- ══ Loading Overlay ══ -->
+  <div id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <span class="loading-text">Phoenix Guild</span>
+  </div>
+
+  <!-- ══ Header (latest structure) ══ -->
   <header>
-    <div class="logo" id="appTitle">Phoenix Guild</div>
-    <div class="user-box">
-      <img id="userPhoto" src="" alt="profile" style="width:32px; height:32px; border-radius:50%;" />
-      <span id="userName">Loading...</span>
-      <button id="langToggleBtn" class="logout" onclick="toggleLanguage()">🌐 EN</button>
-      <button class="logout" onclick="logout()" data-i18n="btn_logout">로그아웃</button>
+    <!-- Left: logo -->
+    <div class="header-left">
+      <span class="logo" onclick="location.href='main.html'">PHOENIX</span>
+    </div>
+
+    <!-- Centre: banner image -->
+    <img
+      src="assets/Phoenix_header.jpg"
+      alt="Phoenix Guild"
+      class="header-banner-center"
+      onclick="location.href='main.html'"
+    >
+
+    <!-- Right: user chip -->
+    <div class="header-right">
+      <div class="header-user-chip">
+        <img id="userPhoto" src="assets/icon-192.png" alt="profile"
+             onerror="this.src='assets/icon-192.png'">
+        <span id="userName">Loading…</span>
+      </div>
     </div>
   </header>
 
+  <!-- ══ Main content ══ -->
   <div class="container">
     <div class="card">
-      <h2 data-i18n="login_nick_prompt">닉네임 설정</h2>
-      <p>길드 시스템 이용을 위해<br>게임 내 닉네임을 등록해주세요.</p>
+      <h2>Set Your Nickname</h2>
+      <p>Please enter your in-game nickname<br>to register with the guild system.</p>
 
-      <!-- Discord 닉네임 자동완성 제안 배너 (Discord 로그인 시만 표시) -->
+      <!-- Discord auto-fill banner (shown only on Discord login) -->
       <div class="discord-suggestion" id="discordSuggestion">
-        <button class="ds-close" onclick="dismissDiscordSuggestion()" title="닫기">✕</button>
+        <button class="ds-close" onclick="dismissDiscordSuggestion()" title="Dismiss">✕</button>
         <div class="ds-header">
           <img class="ds-avatar" id="dsAvatar" src="" alt="">
           <div class="ds-info">
-            <div class="ds-label">Discord에서 가져온 닉네임</div>
+            <div class="ds-label">Suggested from Discord</div>
             <div class="ds-name" id="dsName">—</div>
-            <span class="ds-server-badge" id="dsServerBadge" style="display:none">서버 닉네임</span>
+            <span class="ds-server-badge" id="dsServerBadge" style="display:none">Server Nickname</span>
           </div>
         </div>
         <div class="ds-btns">
-          <button class="ds-btn ds-btn-apply" onclick="applyDiscordNick()">✅ 이 닉네임 사용</button>
-          <button class="ds-btn ds-btn-skip" onclick="dismissDiscordSuggestion()">직접 입력</button>
+          <button class="ds-btn ds-btn-apply" onclick="applyDiscordNick()">✅ Use this name</button>
+          <button class="ds-btn ds-btn-skip"  onclick="dismissDiscordSuggestion()">Type manually</button>
         </div>
       </div>
 
       <div class="input-group">
-        <label>In-game Nickname</label>
-        <input type="text" id="nicknameInput" data-i18n-placeholder="login_nick_placeholder" placeholder="게임 닉네임 입력" />
+        <label for="nicknameInput">In-game Nickname</label>
+        <input
+          type="text"
+          id="nicknameInput"
+          placeholder="Enter your in-game nickname"
+          autocomplete="off"
+          maxlength="30"
+        />
       </div>
 
-      <button class="btn-save" onclick="saveNickname()" data-i18n="login_nick_btn">저장 및 신청</button>
+      <button class="btn-save" onclick="saveNickname()">Save &amp; Submit</button>
     </div>
   </div>
 
   <script>
-    // ── Discord 자동완성 로직 ────────────────────────────────────────────────
+    // ── Discord suggestion banner ─────────────────────────────────────
     let _discordSuggestedNick = '';
 
     function initDiscordSuggestion() {
       try {
         const raw = sessionStorage.getItem('discord_user');
         if (!raw) return;
-        sessionStorage.removeItem('discord_user'); // 1회만 사용
+        sessionStorage.removeItem('discord_user'); // one-time use
         const du = JSON.parse(raw);
 
-        // 닉네임 우선순위: 서버닉 > globalName > username
+        // Priority: server nick > globalName > username
         const nick = du.serverNick || du.globalName || du.username || '';
         if (!nick) return;
 
         _discordSuggestedNick = nick;
 
-        // 배너 렌더링
-        const banner = document.getElementById('discordSuggestion');
         document.getElementById('dsAvatar').src = du.avatar || '';
         document.getElementById('dsName').textContent = nick;
 
@@ -285,12 +350,10 @@
           document.getElementById('dsServerBadge').style.display = 'inline-block';
         }
 
-        banner.style.display = 'block';
-
-        // 입력창에도 미리 채워두기
+        document.getElementById('discordSuggestion').style.display = 'block';
         document.getElementById('nicknameInput').value = nick;
 
-        console.log('[Discord] 닉네임 자동완성:', nick, '(serverNick:', du.serverNick, ')');
+        console.log('[Discord] Auto-fill nick:', nick, '(serverNick:', du.serverNick, ')');
       } catch(e) {
         console.warn('[Discord] suggestion init error:', e);
       }
@@ -306,75 +369,69 @@
       document.getElementById('discordSuggestion').style.display = 'none';
     }
 
-    // ── 인증 상태 감시 ───────────────────────────────────────────────────────
+    // ── Auth state ───────────────────────────────────────────────────
     auth.onAuthStateChanged((user) => {
       const ol = document.getElementById('loadingOverlay');
       if (ol) ol.style.display = 'none';
-      if (!user) return location.replace("login.html");
-      
-      // 상단 프로필 이미지 업데이트
-      const userPhotoEl = document.getElementById("userPhoto");
-      if (userPhotoEl) {
-        // Discord 로그인인 경우 discordLinks의 avatarUrl 사용
-        const isDiscord = user.uid && user.uid.startsWith('discord:');
-        const photoSrc  = user.customPhotoURL || user.photoURL;
-        if (photoSrc) userPhotoEl.src = photoSrc;
-      }
-      const displayName = user.displayName || (user.uid && user.uid.startsWith('discord:') ? 'Discord User' : 'User');
-      document.getElementById("userName").textContent = displayName;
+      if (!user) return location.replace('login.html');
 
-      // Discord 닉네임 자동완성 초기화
+      // Update profile photo
+      const photoEl = document.getElementById('userPhoto');
+      const photoSrc = user.customPhotoURL || user.photoURL;
+      if (photoSrc && photoEl) photoEl.src = photoSrc;
+
+      // Display name
+      const displayName = user.displayName ||
+        (user.uid && user.uid.startsWith('discord:') ? 'Discord User' : 'User');
+      document.getElementById('userName').textContent = displayName;
+
+      // Discord suggestion
       initDiscordSuggestion();
     });
 
-    // 닉네임 저장 함수
+    // ── Save nickname ────────────────────────────────────────────────
     async function saveNickname() {
-      const user = auth.currentUser;
-      const nickname = document.getElementById("nicknameInput").value.trim();
-      const btn = document.querySelector('.btn-save');
-      
+      const user     = auth.currentUser;
+      const nickname = document.getElementById('nicknameInput').value.trim();
+      const btn      = document.querySelector('.btn-save');
+
       if (!nickname) {
-        const msg = currentLang === 'ko' ? "닉네임을 입력하세요." : "Please enter your nickname.";
-        showToast(msg, 'warning');
+        showToast('Please enter your nickname.', 'warning');
         return;
       }
 
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; btn.style.opacity = '0.6'; }
+      localStorage.setItem('nickname', nickname);
+
+      // ── Geo detection (4-provider fallback) ──
+      let geoInfo = {};
+      const GEO_PROVIDERS = [
+        { url: 'https://ipapi.co/json/',             parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone }) },
+        { url: 'https://freeipapi.com/api/json/',    parse: d => ({ code: d.countryCode,  city: d.cityName, tz: d.timeZone }) },
+        { url: 'https://ipwho.is/',                  parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone?.id }) },
+        { url: 'https://get.geojs.io/v1/ip/geo.json', parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone }) }
+      ];
+      for (const p of GEO_PROVIDERS) {
+        try {
+          const r = await fetch(p.url, { signal: AbortSignal.timeout(4000) });
+          if (!r.ok) continue;
+          const d = await r.json();
+          const info = p.parse(d);
+          if (info.code && /^[A-Z]{2}$/i.test(info.code)) {
+            geoInfo = { code: info.code.toUpperCase(), city: info.city || null, tz: info.tz || null };
+            break;
+          }
+        } catch(e) { /* try next provider */ }
+      }
+
       try {
-        // ✅ 로컬 스토리지 저장 (즉시 반영용)
-        if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; btn.style.opacity = '0.6'; }
-        localStorage.setItem("nickname", nickname);
-
-        // ✅ Firestore 저장 (role: pending으로 설정하여 승인 대기 상태로 만듦)
-        // merge: true를 통해 기존 데이터(구글 프로필 등)를 보존하며 닉네임만 덮어씀
-        // ── 국가 감지 (4-provider 폴백, 실패해도 가입 진행) ──
-        let geoInfo = {};
-        const GEO_PROVIDERS_NICK = [
-          { url: 'https://ipapi.co/json/',             parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone }) },
-          { url: 'https://freeipapi.com/api/json/',    parse: d => ({ code: d.countryCode,  city: d.cityName, tz: d.timeZone }) },
-          { url: 'https://ipwho.is/',                  parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone?.id }) },
-          { url: 'https://get.geojs.io/v1/ip/geo.json', parse: d => ({ code: d.country_code, city: d.city, tz: d.timezone }) }
-        ];
-        for (const p of GEO_PROVIDERS_NICK) {
-          try {
-            const r = await fetch(p.url, { signal: AbortSignal.timeout(4000) });
-            if (!r.ok) continue;
-            const d = await r.json();
-            const info = p.parse(d);
-            if (info.code && /^[A-Z]{2}$/i.test(info.code)) {
-              geoInfo = { code: info.code.toUpperCase(), city: info.city || null, tz: info.tz || null };
-              break;
-            }
-          } catch(e) { /* 다음 provider 시도 */ }
-        }
-
-        // Discord 로그인 여부 확인
         const isDiscordUser = user.uid && user.uid.startsWith('discord:');
 
         if (isDiscordUser) {
-          // ── Discord 유저: role/uid는 이미 Functions에서 설정됨
-          //    nickname + geo 정보만 업데이트 (role 변경 금지)
-          await db.collection("users").doc(user.uid).set({
-            nickname: nickname,
+          // Discord user: role/uid already set by Cloud Function
+          // Only update nickname + geo (never touch role/uid/email — Firestore rules block it)
+          await db.collection('users').doc(user.uid).set({
+            nickname,
             loginProvider: 'discord',
             ...(geoInfo.code && {
               country     : geoInfo.code,
@@ -386,17 +443,17 @@
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
 
-          showToast('닉네임이 저장되었습니다! ✅', 'success', 2000);
-          // Discord 유저는 이미 승인됨 → main.html로 바로 이동
-          setTimeout(() => location.replace("main.html"), 1200);
+          showToast('Nickname saved! ✅', 'success', 2000);
+          // Discord users are already approved → go straight to main
+          setTimeout(() => location.replace('main.html'), 1200);
 
         } else {
-          // ── 일반 유저 (Google 등): role: pending으로 설정 후 승인 대기
-          await db.collection("users").doc(user.uid).set({
-            nickname: nickname,
-            role: "pending",
+          // Regular user (Google, etc.): set role: pending, await admin approval
+          await db.collection('users').doc(user.uid).set({
+            nickname,
+            role : 'pending',
             email: user.email || null,
-            uid: user.uid,
+            uid  : user.uid,
             ...(geoInfo.code && {
               country     : geoInfo.code,
               geoCity     : geoInfo.city     || null,
@@ -407,27 +464,16 @@
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
 
-          showToast('닉네임이 저장되었습니다! ✅', 'success', 2000);
-          setTimeout(() => location.replace("pending.html"), 1200);
+          showToast('Nickname saved! Awaiting approval. ✅', 'success', 2000);
+          setTimeout(() => location.replace('pending.html'), 1200);
         }
       } catch (error) {
-        if (btn) { btn.disabled = false; btn.textContent = '저장 및 신청'; btn.style.opacity = ''; }
-        showToast('저장에 실패했습니다: ' + error.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Save & Submit'; btn.style.opacity = ''; }
+        showToast('Save failed: ' + error.message, 'error');
         console.error('nickname save error:', error);
       }
     }
-
-    // 초기 언어 적용
-    window.addEventListener('DOMContentLoaded', () => {
-      if (typeof applyLanguage === "function") applyLanguage();
-    });
   </script>
 
-
-  <!-- 로딩 오버레이 -->
-  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
-    <div class="loading-spinner"></div>
-    <span class="loading-text" style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">Phoenix Guild</span>
-  </div>
 </body>
 </html>
