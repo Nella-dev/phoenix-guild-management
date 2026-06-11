@@ -22,6 +22,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
   <script src="i18n.js"></script>
   <script src="i18n_added.js"></script>
   
@@ -411,7 +413,7 @@
     <div class="sidebar-user-info">
       <button class="close-nav" onclick="toggleNav(false)">×</button>
       <img id="userPhoto" src="" alt="profile" />
-      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+      <button class="profile-change-btn" onclick="openProfileModal()" data-i18n="btn_profile_change">✎ 프로필 변경</button>
       <div class="user-name-box">
         <span id="userName" class="u-name">...</span>
         <span id="userBadge" class="role-badge" style="display:none;"></span>
