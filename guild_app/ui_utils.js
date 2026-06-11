@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════
-   ui_utils.js  — ROIDER 공통 UI 유틸리티
+   ui_utils.js  — Phoenix 공통 UI 유틸리티
    Toast 알림 / 커스텀 Confirm 다이얼로그
    ═══════════════════════════════════════ */
 
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (overlay && !overlay.querySelector('.loading-spinner')) {
     overlay.innerHTML = `
       <div class="loading-spinner"></div>
-      <span class="loading-text">ROIDER GUILD</span>`;
+      <span class="loading-text">Phoenix Guild</span>`;
   }
 
   // Toast 컨테이너 보장

@@ -11,7 +11,7 @@
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER 길드 - 작전 지도</title>
+  <title>Phoenix 길드 - 작전 지도</title>
   
   <link rel="stylesheet" href="header_standard.css">
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -20,8 +20,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <script src="i18n.js" defer></script>
-  <script src="i18n_added.js" defer></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
   <script src="calendar_patch.js" defer></script>
   
   <style>
@@ -165,6 +165,8 @@
         </div>
       </div>
 
+      <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
       <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
       <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
     </div>
@@ -394,7 +396,7 @@
   <!-- 로딩 오버레이 -->
   <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
     <div class="loading-spinner"></div>
-    <span class="loading-text" style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">ROIDER GUILD</span>
+    <span class="loading-text" style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">Phoenix Guild</span>
   </div>
 
 

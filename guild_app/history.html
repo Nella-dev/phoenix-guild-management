@@ -8,7 +8,7 @@
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - 결산 내역</title>
+  <title>Phoenix Guild - 결산 내역</title>
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css">
   <link rel="manifest" href="manifest.json">
@@ -19,8 +19,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <script src="i18n.js" defer></script>
-  <script src="i18n_added.js" defer></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
 
   <style>
     /* ── 헤더 인라인 오버라이드 제거 (header_standard.css 위임) ── */
@@ -34,7 +34,7 @@
     .menu-trigger { display:none; font-size:24px; color:var(--accent); background:none; border:none; cursor:pointer; padding:0; line-height:1; }
 
     /* ── 레이아웃 ── */
-    .app-container { display:flex; padding-top:80px; min-height:100vh; }
+    .app-container { display:flex; padding-top:100px; min-height:100vh; }
     nav { width:280px; background:#161b22; border-right:1px solid #2a3242; height:calc(100vh - 80px); position:sticky; top:80px; z-index:1000; flex-shrink:0; overflow-y:auto; }
 
     @media(max-width:850px){
@@ -161,13 +161,13 @@
 </head>
 <body>
 
-<div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f1015;z-index:9999;display:flex;justify-content:center;align-items:center;color:#f4c430;font-size:1.2rem;font-weight:bold;">ROIDER GUILD Loading...</div>
+<div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f1015;z-index:9999;display:flex;justify-content:center;align-items:center;color:#f4c430;font-size:1.2rem;font-weight:bold;">Phoenix Guild Loading...</div>
 
 <header>
   <div class="header-left">
     <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
-    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   <div class="header-right user-box">
     <button class="header-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,.05);border:1px solid #444;color:#ccc;padding:5px 10px;border-radius:20px;font-size:11px;cursor:pointer;">🌐 KO</button>
   </div>
@@ -205,6 +205,8 @@
         </div>
       </div>
 
+      <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
       <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
       <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
     </div>
@@ -446,7 +448,7 @@
     }
 
     // 번역 키
-    const T = (key, fb) => (window.i18n?.[lang]?.[key]) || fb;
+    const T = (key, fb) => { const v = window.i18n?.[lang]?.[key]; return (v !== undefined && v !== null) ? v : (window.i18n?.['en']?.[key] ?? fb); };
 
     // 요약 칩
     const memberCount = rows.length;

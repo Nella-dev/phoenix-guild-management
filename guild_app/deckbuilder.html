@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- DNS Prefetch & Preconnect for performance -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://www.yaphalla.com">
+
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="description" content="Phoenix 길드 덱 빌딩 제작소 - Yaphalla 에디터">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Phoenix Guild - 덱 빌딩 제작소</title>
+  <link rel="stylesheet" href="header_standard.css">
+  <link rel="stylesheet" href="common_style.css">
+  <link rel="manifest" href="manifest.json">
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
+
+  <style>
+    /* [헤더 스타일] */
+    header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      padding: 10px 15px !important;
+      background: #121721 !important;
+      border-bottom: 1px solid #2a3242 !important;
+      min-height: 80px !important;
+      box-sizing: border-box !important;
+      position: sticky !important;
+      top: 0 !important;
+      width: 100%;
+      z-index: 2000 !important;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    }
+    .header-left {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+    }
+    .menu-trigger {
+      display: none;
+      font-size: 24px;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    /* [전체 레이아웃] */
+    .app-container {
+      display: flex;
+      padding-top: 100px;
+      min-height: 100vh;
+    }
+
+    /* [사이드바] */
+    nav {
+      width: 250px;
+      background: #161b22;
+      border-right: 1px solid #2a3242;
+      height: calc(100vh - 60px);
+      position: sticky;
+      top: 60px;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 850px) {
+      .menu-trigger { display: block !important; }
+      nav { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; z-index: 2100; box-shadow: 5px 0 15px rgba(0,0,0,0.5); border-right: 1px solid #2a3242; transition: left 0.3s ease; background: #161b22; }
+      nav.active { left: 0; }
+      .app-container { display: block; }
+      .overlay.active { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2050; }
+    }
+
+    /* [사이드바 유저 정보] */
+    .sidebar-user-info {
+      padding: 40px 20px 25px;
+      background: rgba(244, 196, 48, 0.03);
+      border-bottom: 1px solid #2a3242;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .sidebar-user-info img {
+      width: 70px; height: 70px; border-radius: 50%; margin-bottom: 12px; object-fit: cover; box-sizing: border-box;
+    }
+    .user-name-box {
+      display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 15px;
+    }
+    .u-name { font-size: 17px; font-weight: bold; color: #fff; }
+
+    .close-nav {
+      position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 28px; cursor: pointer; line-height: 1; z-index: 10; padding: 5px; display: none;
+    }
+
+    .nav-container { display: flex; flex-direction: column; }
+    .nav-link {
+      font-size: 15px; padding: 14px 25px; color: #ccc; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-link.active { color: #f4c430; background: rgba(244, 196, 48, 0.1); font-weight: bold; }
+
+    /* 폴더 메뉴 */
+    .nav-folder {}
+    .nav-folder-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 25px; color: #ccc; cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.2s, color 0.2s; user-select: none; font-size: 15px;
+    }
+    .nav-folder-header:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-folder-header.open { color: #f4c430; }
+    .nav-folder-title { display: flex; align-items: center; gap: 8px; }
+    .nav-folder-arrow { font-size: 10px; transition: transform 0.25s; color: #666; }
+    .nav-folder-header.open .nav-folder-arrow { transform: rotate(90deg); color: #f4c430; }
+    .nav-folder-children {
+      overflow: hidden; max-height: 0; transition: max-height 0.28s ease; background: rgba(0,0,0,0.15);
+    }
+    .nav-folder-children.open { max-height: 300px; }
+    .nav-sub-link {
+      display: block; font-size: 14px; padding: 11px 25px 11px 44px; color: #aaa;
+      text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.15s, color 0.15s;
+    }
+    .nav-sub-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-sub-link.active { color: #f4c430; background: rgba(244,196,48,0.08); font-weight: 600; }
+
+    /* [메인 콘텐츠] */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    /* 상단 제목 바 */
+    .deck-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #2a3242;
+      background: #121721;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .deck-header h2 {
+      color: #f4c430;
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+    .deck-header .deck-badge {
+      background: rgba(244,196,48,0.15);
+      color: #f4c430;
+      border: 1px solid rgba(244,196,48,0.35);
+      border-radius: 20px;
+      font-size: 11px;
+      padding: 3px 10px;
+      font-weight: 600;
+    }
+
+    /* iframe 컨테이너 */
+    .iframe-wrapper {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+    .deck-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #0f1015;
+    }
+
+    /* 로딩 오버레이 (iframe 로딩 중) */
+    .iframe-loading {
+      position: absolute;
+      inset: 0;
+      background: #0f1015;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+      transition: opacity 0.4s;
+    }
+    .iframe-loading.hidden { opacity: 0; pointer-events: none; }
+    .iframe-loading .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(244,196,48,0.2);
+      border-top-color: #f4c430;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    .iframe-loading p {
+      color: #aaa; font-size: 14px; margin: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* iframe 차단 안내 */
+    .iframe-blocked {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: #0f1015;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 30px;
+      z-index: 5;
+    }
+    .iframe-blocked .block-icon { font-size: 48px; }
+    .iframe-blocked h3 { color: #f4c430; margin: 0; font-size: 1.1rem; }
+    .iframe-blocked p { color: #aaa; font-size: 13px; margin: 0; line-height: 1.6; }
+    .iframe-blocked .open-btn {
+      margin-top: 8px;
+      background: #f4c430;
+      color: #000;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .iframe-blocked .open-btn:hover { opacity: 0.85; }
+
+    /* 프로필 변경 버튼 */
+    .profile-change-btn {
+      display: block; width: 100%; margin: 6px 0 4px 0; padding: 5px 0;
+      background: rgba(244,196,48,0.12); color: #f4c430; border: 1px solid rgba(244,196,48,0.35);
+      border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center;
+      letter-spacing: 0.3px; transition: background 0.15s;
+    }
+    .profile-change-btn:hover { background: rgba(244,196,48,0.22); }
+
+    /* 모바일 iframe 높이 조정 */
+    @media (max-width: 850px) {
+      .main-content { height: calc(100vh - 100px); }
+      .deck-header { padding: 12px 16px 10px; }
+      .deck-header h2 { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay">Phoenix Guild Loading...</div>
+
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
+  </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
+  <div class="user-box">
+    <button class="logout-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,0.05); border:1px solid #444; color:#ccc; padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer;">🌐 KO</button>
+  </div>
+</header>
+
+<div class="overlay" id="overlay" onclick="toggleNav(false)"></div>
+
+<div class="app-container">
+  <nav id="sideNav" class="side-nav">
+    <div class="sidebar-user-info">
+      <button class="close-nav" onclick="toggleNav(false)">×</button>
+      <img id="userPhoto" src="" alt="profile" />
+      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+      <div class="user-name-box">
+        <span id="userName" class="u-name">...</span>
+        <span id="myRoleBadge" class="role-badge"></span>
+      </div>
+      <button class="logout-btn" data-i18n="menu_logout" onclick="logout()" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #444; background: rgba(255,255,255,0.05); color: #ccc; border-radius: 8px; cursor: pointer;">로그아웃</button>
+    </div>
+
+    <div class="nav-container">
+      <a href="main.html" class="nav-link" data-i18n="menu_home">홈</a>
+      <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+
+      <!-- 주간 컨텐츠 기록부 폴더 -->
+      <div class="nav-folder">
+        <div class="nav-folder-header" id="navFolderWeekly">
+          <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+          <span class="nav-folder-arrow">▶</span>
+        </div>
+        <div class="nav-folder-children" id="navFolderWeeklyChildren">
+          <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+          <a href="weekly.html" class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+          <a href="history.html" class="nav-sub-link" data-i18n="menu_history">📜 결산 내역</a>
+        </div>
+      </div>
+
+      <a href="deckbuilder.html" class="nav-link active" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
+      <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+      <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+    </div>
+
+    <script>
+    (function(){
+      var FOLDER_KEY = 'roider_nav_weekly_open';
+      var header   = document.getElementById('navFolderWeekly');
+      var children = document.getElementById('navFolderWeeklyChildren');
+      if (!header || !children) return;
+      var path = window.location.pathname;
+      var isInFolder = path.includes('attendance.html') || path.includes('weekly.html') || path.includes('history.html');
+      var saved = localStorage.getItem(FOLDER_KEY);
+      var shouldOpen = isInFolder || saved === '1';
+      function setOpen(open) {
+        header.classList.toggle('open', open);
+        children.classList.toggle('open', open);
+        localStorage.setItem(FOLDER_KEY, open ? '1' : '0');
+      }
+      setOpen(shouldOpen);
+      header.addEventListener('click', function(e){
+        e.stopPropagation();
+        setOpen(!header.classList.contains('open'));
+      });
+    })();
+    </script>
+  </nav>
+
+  <main class="main-content">
+    <!-- 상단 제목 바 -->
+    <div class="deck-header">
+      <h2>🃏 덱 빌딩 제작소</h2>
+      <span class="deck-badge">Powered by Yaphalla</span>
+    </div>
+
+    <!-- iframe 래퍼 -->
+    <div class="iframe-wrapper">
+      <!-- 로딩 인디케이터 -->
+      <div class="iframe-loading" id="iframeLoading">
+        <div class="spinner"></div>
+        <p>Yaphalla 에디터 불러오는 중...</p>
+      </div>
+
+      <!-- X-Frame-Options 차단 시 안내 -->
+      <div class="iframe-blocked" id="iframeBlocked">
+        <div class="block-icon">🔗</div>
+        <h3>외부 페이지 직접 연결</h3>
+        <p>Yaphalla 에디터는 보안 정책으로 인해<br>임베드가 제한될 수 있습니다.<br>아래 버튼으로 직접 열어보세요.</p>
+        <button class="open-btn" onclick="window.open('https://www.yaphalla.com/editor','_blank')">
+          🚀 Yaphalla 에디터 열기
+        </button>
+      </div>
+
+      <!-- 실제 iframe -->
+      <iframe
+        id="deckIframe"
+        class="deck-iframe"
+        src="https://www.yaphalla.com/editor"
+        title="Yaphalla Deck Builder"
+        allowfullscreen
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+      ></iframe>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── 네비게이션 토글 ──────────────────────────────────────
+  function toggleNav(open) {
+    const nav = document.getElementById('sideNav');
+    const overlay = document.getElementById('overlay');
+    if (open) { nav.classList.add('active'); overlay.classList.add('active'); }
+    else { nav.classList.remove('active'); overlay.classList.remove('active'); }
+  }
+
+  // ── 언어 버튼 ──────────────────────────────────────────
+  function handleLangChange() {
+    if (typeof window.openLangDropdown === 'function') {
+      window.openLangDropdown();
+    }
+  }
+  function updateLangButton() {
+    const langBtn = document.getElementById('langBtn');
+    if (langBtn) {
+      var lang = localStorage.getItem('roider_lang') || 'ko';
+      langBtn.textContent = '🌐 ' + lang.toUpperCase();
+    }
+  }
+
+  // ── iframe 로딩 처리 ────────────────────────────────────
+  const iframe = document.getElementById('deckIframe');
+  const iframeLoading = document.getElementById('iframeLoading');
+  const iframeBlocked = document.getElementById('iframeBlocked');
+
+  // 로딩 타임아웃 (8초 후 차단 여부 판단)
+  let loadTimeout = setTimeout(() => {
+    // iframe 로드가 안 됐으면 차단 안내 표시
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!iframeDoc || iframeDoc.URL === 'about:blank') {
+        showBlocked();
+      }
+    } catch(e) {
+      // cross-origin 접근 오류 = 로드는 됐지만 접근 불가 = 실제론 성공
+      iframeLoading.classList.add('hidden');
+    }
+  }, 8000);
+
+  iframe.addEventListener('load', function() {
+    clearTimeout(loadTimeout);
+    iframeLoading.classList.add('hidden');
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      if (iframeDoc && (iframeDoc.URL === 'about:blank' || iframeDoc.body.innerHTML.trim() === '')) {
+        showBlocked();
+      }
+    } catch(e) {
+      // cross-origin = 로드 성공
+    }
+  });
+
+  iframe.addEventListener('error', function() {
+    clearTimeout(loadTimeout);
+    showBlocked();
+  });
+
+  function showBlocked() {
+    iframeLoading.classList.add('hidden');
+    iframeBlocked.style.display = 'flex';
+  }
+
+  // ── 인증 연동 ──────────────────────────────────────────
+  window._deckPageInit = false;
+
+  function initDeckPage(user, data) {
+    if (window._deckPageInit) return;
+    window._deckPageInit = true;
+
+    const myRole = (data.role || "member").toLowerCase();
+
+    document.getElementById("loadingOverlay").style.display = "none";
+    document.getElementById("userName").textContent = data.nickname || "User";
+
+    const photoEl = document.getElementById("userPhoto");
+    if (photoEl) {
+      photoEl.src = data.customPhotoURL || user.photoURL ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nickname || 'U')}&background=2a3242&color=f4c430&bold=true`;
+      photoEl.className = `border-${myRole}`;
+    }
+
+    const badgeEl = document.getElementById("myRoleBadge");
+    if (badgeEl && myRole) {
+      badgeEl.textContent = myRole.toUpperCase();
+      badgeEl.className = `role-badge role-${myRole.toUpperCase()}`;
+      badgeEl.style.display = myRole !== 'member' ? "inline-block" : "none";
+    }
+
+    updateLangButton();
+    if (typeof applyLanguage === 'function') applyLanguage();
+
+    if (myRole === "admin" || myRole === "manager") {
+      const navAdmin = document.getElementById("navAdminMenu");
+      if (navAdmin) navAdmin.style.display = "block";
+    }
+  }
+
+  // firebase_config.js의 updateGlobalUI 훅
+  const _origUpdateGlobalUI = window.updateGlobalUI;
+  window.updateGlobalUI = function(data, user) {
+    if (typeof _origUpdateGlobalUI === 'function') _origUpdateGlobalUI(data, user);
+    initDeckPage(user, data);
+  };
+
+  // 이미 로그인 상태인 경우 직접 초기화
+  const _currentUser = auth.currentUser;
+  if (_currentUser) {
+    db.collection("users").doc(_currentUser.uid).get().then(snap => {
+      if (snap.exists && snap.data().role !== "pending") {
+        initDeckPage(_currentUser, snap.data());
+      }
+    }).catch(err => console.error("deck init error:", err));
+  }
+
+  function logout() { auth.signOut().then(() => location.replace("login.html")); }
+</script>
+
+</body>
+</html>

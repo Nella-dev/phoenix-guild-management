@@ -11,7 +11,7 @@
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - Weekly Settlement</title>
+  <title>Phoenix Guild - Weekly Settlement</title>
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css">
   <link rel="manifest" href="manifest.json">
@@ -22,8 +22,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <script src="i18n.js" defer></script>
-  <script src="i18n_added.js" defer></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
   
   <style>
     /* 기본 배경 및 폰트 */
@@ -58,7 +58,7 @@
     }
 
     /* [전체 레이아웃 구성] */
-    .app-container { display: flex; padding-top: 80px; min-height: 100vh; }
+    .app-container { display: flex; padding-top: 100px; min-height: 100vh; }
 
     /* [사이드바 - PC 상시 노출 / 모바일 슬라이드] */
     nav { 
@@ -218,54 +218,156 @@
       th, td { padding: 6px 3px; }
     }
 
-    /* ── 주간 결산 가이드 모달 ── */
-    .guide-modal-wide { max-width: 520px !important; max-height: 88vh; overflow-y: auto; }
-    .guide-step {
-      display: flex; gap: 14px; align-items: flex-start;
-      background: rgba(255,255,255,0.03); border: 1px solid #2a3242;
-      border-radius: 12px; padding: 14px; margin: 10px 0;
+    /* ── 주간 결산 가이드 모달 (페이지네이션 방식) ── */
+    .guide-modal-wide {
+      max-width: min(92vw, 480px) !important;
+      width: 92vw !important;
+      max-height: 90vh !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      box-sizing: border-box !important;
+    }
+    /* 페이지 컨테이너 */
+    .guide-pages-wrap {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    .guide-page {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      animation: guideFadeIn 0.25s ease;
+    }
+    .guide-page.active { display: flex; }
+    @keyframes guideFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    /* 페이지 인디케이터 도트 */
+    .guide-dots {
+      display: flex; justify-content: center; gap: 6px;
+      margin: 12px 0 8px;
+    }
+    .guide-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #3a4252; transition: background 0.2s;
+    }
+    .guide-dot.active { background: #f4c430; }
+    /* 내비게이션 버튼 영역 */
+    .guide-nav {
+      display: flex; gap: 8px; margin-top: 6px;
+    }
+    .guide-nav-btn {
+      flex: 1; padding: 13px 0;
+      border: none; border-radius: 10px;
+      font-weight: 700; font-size: 14px;
+      cursor: pointer; transition: 0.2s;
+    }
+    .guide-nav-btn.prev {
+      background: #2a3242; color: #888;
+    }
+    .guide-nav-btn.prev:hover { background: #3a4252; color: #ccc; }
+    .guide-nav-btn.next {
+      background: #f4c430; color: #111;
+    }
+    .guide-nav-btn.next:hover { background: #ffd740; }
+    .guide-nav-btn.close-btn {
+      background: #2a3242; color: #fff;
+    }
+    .guide-nav-btn.close-btn:hover { background: #3a4252; }
+    /* 스텝 헤더 */
+    .guide-step-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 4px;
     }
     .guide-step-num {
-      width: 28px; height: 28px; border-radius: 50%; background: #f4c430;
-      color: #111; font-weight: 900; font-size: 13px;
+      width: 32px; height: 32px; border-radius: 50%; background: #f4c430;
+      color: #111; font-weight: 900; font-size: 14px;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .guide-step-body { flex: 1; }
-    .guide-step-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-    .guide-step-desc { font-size: 11px; color: #aaa; line-height: 1.6; }
+    .guide-step-title {
+      font-size: 14px; font-weight: 700; color: #fff; line-height: 1.4;
+    }
+    .guide-step-desc {
+      font-size: 12px; color: #aaa; line-height: 1.8;
+      word-break: keep-all;
+    }
+    /* 랭킹 항목 리스트 (테이블 대신 행 리스트로 잘림 완전 방지) */
+    .guide-col-list {
+      display: flex; flex-direction: column; gap: 0;
+      margin-top: 10px;
+      border: 1px solid #2a3242; border-radius: 10px;
+      overflow: hidden;
+    }
+    .guide-col-item {
+      display: flex; flex-direction: column;
+      padding: 10px 14px;
+      border-bottom: 1px solid #2a3242;
+      gap: 3px;
+    }
+    .guide-col-item:last-child { border-bottom: none; }
+    .guide-col-name {
+      font-size: 13px; font-weight: 700; color: #fff;
+      white-space: nowrap;
+    }
+    .guide-col-name.highlight { color: #f4c430 !important; }
+    .guide-col-name.green     { color: #00e676 !important; }
+    .guide-col-desc {
+      font-size: 12px; color: #aaa; line-height: 1.7;
+      word-break: keep-all; padding-left: 2px;
+    }
+    .guide-col-desc.green { color: #00e676 !important; font-weight: 600; }
+    /* 예시 박스 */
     .guide-mock {
       background: #0f1015; border: 1px solid #3a4252; border-radius: 10px;
-      padding: 12px 14px; margin-top: 8px; font-size: 11px;
+      padding: 14px 16px; margin-top: 8px; font-size: 12px;
     }
-    .guide-mock-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
-    .guide-mock-label { color: #888; min-width: 70px; }
+    .guide-mock-row {
+      display: flex; align-items: flex-start; flex-wrap: wrap;
+      gap: 6px; margin: 7px 0; line-height: 1.5;
+    }
+    .guide-mock-label { color: #888; min-width: 80px; }
     .guide-mock-val { color: #f4c430; font-weight: bold; font-size: 12px; }
+    .guide-mock-calc { color: #aaa; font-size: 11px; }
+    /* 팁/정보 박스 */
     .guide-tip {
       background: rgba(244,196,48,0.07); border: 1px solid rgba(244,196,48,0.25);
-      border-radius: 8px; padding: 10px 12px; margin-top: 10px;
-      font-size: 11px; color: #f4c430; line-height: 1.6;
+      border-radius: 8px; padding: 12px 14px; margin-top: 10px;
+      font-size: 12px; color: #f4c430; line-height: 1.7; word-break: keep-all;
     }
     .guide-info {
       background: rgba(0,176,255,0.07); border: 1px solid rgba(0,176,255,0.25);
-      border-radius: 8px; padding: 10px 12px; margin-top: 8px;
-      font-size: 11px; color: #80d8ff; line-height: 1.6;
+      border-radius: 8px; padding: 12px 14px; margin-top: 10px;
+      font-size: 12px; color: #80d8ff; line-height: 1.7; word-break: keep-all;
     }
-    .guide-score-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
-    .guide-score-table th { background: #1c1f2a; color: #888; padding: 6px 8px; text-align: left; }
-    .guide-score-table td { padding: 6px 8px; border-top: 1px solid #2a3242; color: #ccc; }
-    .guide-score-table td:last-child { color: #00e676; font-weight: bold; text-align: right; }
-    /* weekly 랭킹 테이블 전용: 의미 컬럼 좌측 정렬 */
-    .guide-rank-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; table-layout: fixed; }
-    .guide-rank-table th { background: #1c1f2a; color: #888; padding: 6px 8px; text-align: left; }
-    .guide-rank-table td { padding: 6px 8px; border-top: 1px solid #2a3242; color: #ccc; text-align: left; word-break: keep-all; }
-    .guide-rank-table col.col-name { width: 38%; }
-    .guide-rank-table col.col-desc { width: 62%; }
-    .guide-step-body { flex: 1; min-width: 0; overflow: hidden; }
-    .guide-divider { border: none; border-top: 1px solid #2a3242; margin: 16px 0; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
-    .modal-content { background: #1c1f2a; padding: 25px; border-radius: 16px; width: 90%; max-width: 360px; border: 1px solid #3a4252; position: relative; }
-    .btn-guide-open { background: rgba(244,196,48,0.15); color: #f4c430; border: 1px solid rgba(244,196,48,0.3); padding: 6px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-left: 10px; }
+    .guide-divider { border: none; border-top: 1px solid #2a3242; margin: 14px 0; }
+    .modal {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+      z-index: 3000; justify-content: center; align-items: center;
+      padding: 16px; box-sizing: border-box;
+    }
+    .modal-content {
+      background: #1c1f2a; padding: 22px 20px 18px;
+      border-radius: 16px; width: 100%; max-width: 360px;
+      border: 1px solid #3a4252; position: relative;
+      box-sizing: border-box;
+    }
+    .btn-guide-open {
+      background: rgba(244,196,48,0.15); color: #f4c430;
+      border: 1px solid rgba(244,196,48,0.3);
+      padding: 6px 12px; border-radius: 20px; font-size: 11px;
+      cursor: pointer; font-weight: bold; transition: 0.2s; margin-left: 10px;
+    }
     .btn-guide-open:hover { background: rgba(244,196,48,0.25); }
+    /* 모바일 가이드 모달 */
+    @media (max-width: 500px) {
+      .guide-modal-wide { padding: 16px 14px 14px !important; }
+      .guide-rank-table { font-size: 11px; }
+      .guide-rank-table td, .guide-rank-table th { padding: 7px 8px; }
+    }
 
     /* ── 프로필 변경 버튼 ── */
     .profile-change-btn {
@@ -290,13 +392,13 @@
 <body>
 
 <!-- ✅ [버그수정] 로딩 오버레이 추가 -->
-<div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f1015; z-index:9999; display:flex; justify-content:center; align-items:center; color:#f4c430; font-size:1.2rem; font-weight:bold;">ROIDER GUILD Loading...</div>
+<div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f1015; z-index:9999; display:flex; justify-content:center; align-items:center; color:#f4c430; font-size:1.2rem; font-weight:bold;">Phoenix Guild Loading...</div>
 
 <header>
   <div class="header-left">
     <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
-    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   <div class="user-box">
     <button class="header-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,0.05); border:1px solid #444; color:#ccc; padding:5px 10px; border-radius:20px; font-size:11px; cursor:pointer;">🌐 EN</button>
   </div>
@@ -335,6 +437,8 @@
         </div>
       </div>
 
+      <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
       <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
       <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
     </div>
@@ -700,29 +804,48 @@
   }
 
   // ─── 주간 결산 가이드 모달 언어별 렌더링 ───
+  // ─── 가이드 모달 페이지네이션 상태 ───
+  let _guidePage = 0;
+  const _GUIDE_TOTAL = 4; // 1:출석, 2:랭킹표(상), 3:랭킹표(하)+예시, 4:운영진
+
   function openWeeklyGuide() {
+    _guidePage = 0;
     const lang = localStorage.getItem('roider_lang') || 'ko';
     const d = (window.i18n && window.i18n[lang]) ? window.i18n[lang] : {};
     const ko = lang === 'ko';
 
     const body = document.querySelector('#weeklyGuideModal .modal-content');
     body.innerHTML = `
-      <h3 style="text-align:center; color:#f4c430; margin:0 0 6px 0;">
-        ${d.weekly_guide_modal_title || (ko ? '💰 주간 결산 이용 가이드' : '💰 Weekly Settlement Guide')}
-      </h3>
-      <p style="text-align:center; font-size:11px; color:#666; margin:0 0 16px;">
-        ${d.weekly_guide_modal_subtitle || (ko ? '결산 시스템이 어떻게 작동하는지 확인하세요!' : 'Learn how the settlement system works!')}
-      </p>
+      <!-- 헤더 -->
+      <div style="text-align:center; margin-bottom:14px;">
+        <h3 style="color:#f4c430; margin:0 0 4px; font-size:16px;">
+          ${d.weekly_guide_modal_title || (ko ? '💰 주간 결산 이용 가이드' : '💰 Weekly Settlement Guide')}
+        </h3>
+        <p style="font-size:11px; color:#666; margin:0;" id="guideSubtitle">
+          ${d.weekly_guide_modal_subtitle || (ko ? '결산 시스템이 어떻게 작동하는지 확인하세요!' : 'Learn how the settlement system works!')}
+        </p>
+      </div>
 
-      <!-- STEP 1 -->
-      <div class="guide-step">
-        <div class="guide-step-num">1</div>
-        <div class="guide-step-body">
-          <div class="guide-step-title">${d.wkly_guide_s1_title || (ko ? '📅 출석부 기록 → 자동 반영' : '📅 Attendance → Auto Sync')}</div>
+      <!-- 페이지 인디케이터 도트 -->
+      <div class="guide-dots" id="guideDots">
+        ${Array.from({length: _GUIDE_TOTAL}, (_,i) =>
+          `<div class="guide-dot${i===0?' active':''}" id="guideDot${i}"></div>`
+        ).join('')}
+      </div>
+
+      <!-- 페이지 컨테이너 -->
+      <div class="guide-pages-wrap" id="guidePagesWrap" style="overflow-y:auto; max-height:calc(90vh - 200px);">
+
+        <!-- PAGE 0: 출석부 기록 -->
+        <div class="guide-page active" id="guidePage0">
+          <div class="guide-step-header">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-title">${d.wkly_guide_s1_title || (ko ? '📅 출석부 기록 → 자동 반영' : '📅 Attendance → Auto Sync')}</div>
+          </div>
           <div class="guide-step-desc">
             ${d.wkly_guide_s1_desc || (ko
-              ? '<b style="color:#f4c430;">주간 출석부</b>에 매일 점수를 기록하면<br>이 페이지의 랭킹에 <b>실시간으로 자동 반영</b>됩니다.<br>별도 입력 없이 출석부만 성실히 기록하면 됩니다!'
-              : 'Record your scores daily in the <b style="color:#f4c430;">Attendance</b> page<br>and they will be <b>auto-synced</b> to this ranking in real time.<br>No extra input needed — just record attendance!')}
+              ? '<b style="color:#f4c430;">주간 출석부</b>에 매일 점수를 기록하면,<br>이 페이지의 랭킹에 <b>실시간으로 자동 반영</b>됩니다.<br>별도 입력 없이 출석부만 성실히 기록하면 됩니다!'
+              : 'Record your scores daily in the <b style="color:#f4c430;">Attendance</b> page,<br>and they will be <b>auto-synced</b> to this ranking in real time.<br>No extra input needed — just record attendance!')}
           </div>
           <div class="guide-info">
             ${d.wkly_guide_s1_info || (ko
@@ -730,111 +853,185 @@
               : 'ℹ️ Use in order: Attendance → Settlement.<br>Without attendance records, you won\'t appear on the ranking.')}
           </div>
         </div>
-      </div>
 
-      <!-- STEP 2 -->
-      <div class="guide-step">
-        <div class="guide-step-num">2</div>
-        <div class="guide-step-body">
-          <div class="guide-step-title">${d.wkly_guide_s2_title || (ko ? '📊 랭킹 표 읽는 방법' : '📊 How to Read the Ranking')}</div>
-          <div class="guide-step-desc">${d.wkly_guide_s2_desc || (ko ? '각 컬럼의 의미를 확인하세요.' : 'Understand what each column means.')}</div>
-          <table class="guide-rank-table">
-            <colgroup><col class="col-name"><col class="col-desc"></colgroup>
-            <thead><tr>
-              <th>${d.wkly_guide_col_col  || (ko?'컬럼':'Column')}</th>
-              <th>${d.wkly_guide_col_mean || (ko?'의미':'Meaning')}</th>
-            </tr></thead>
-            <tbody>
-              <tr><td>🏰 ${ko?'이계 (합산)':'Laby (Sum)'}</td><td>${ko?'이계 미궁 주간 기록 합산':'Weekly Labyrinth total'}</td></tr>
-              <tr><td>⚔️ ${ko?'명결 (합산)':'Duel (Sum)'}</td><td>${ko?'명예의 결투 주간 기록 합산':'Weekly Honor Duel total'}</td></tr>
-              <tr><td>🎯 ${ko?'활약도 (합산)':'Activity (Sum)'}</td><td>${ko?'길드 활약도 주간 기록 합산':'Weekly Guild Activity total'}</td></tr>
-              <tr><td style="color:#f4c430;">⭐ ${ko?'합산 점수':'Total Score'}</td><td>${ko?'이계+명결+활약도 주간 합산 총점':'Laby+Duel+Activity weekly total'}</td></tr>
-              <tr><td>📈 ${ko?'기여도':'Contribution'}</td><td>${ko?'내 점수 ÷ 전체 합계 × 100%':'My score ÷ total × 100%'}</td></tr>
-              <tr><td style="color:#00e676;">📦 ${ko?'예상 분배량':'Est. Reward'}</td><td style="color:#00e676;font-weight:bold;">${ko?'총 보상 × 내 기여도 비율':'Total reward × my contribution %'}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- STEP 3 -->
-      <div class="guide-step">
-        <div class="guide-step-num">3</div>
-        <div class="guide-step-body">
-          <div class="guide-step-title">${d.wkly_guide_s3_title || (ko ? '📦 보상 분배 계산 예시' : '📦 Reward Distribution Example')}</div>
-          <div class="guide-step-desc">${d.wkly_guide_s3_desc || (ko ? '총 보상 100박스, 3명이 참여한 경우' : 'Total 100 boxes, 3 participants')}</div>
-          <div class="guide-mock">
-            <div class="guide-mock-row">
-              <span class="guide-mock-label">🥇 ${ko?'갓빌라':'GodVilla'}</span>
-              <span class="guide-mock-val">${ko?'합산 80점':'80 pts'}</span>
-              <span style="color:#aaa;font-size:10px;">→ 80/(80+60+40) = <b style="color:#f4c430;">44.4%</b> → ${ko?'44박스':'44 boxes'}</span>
+        <!-- PAGE 1: 랭킹 표 읽는 방법 (컬럼 1~3) -->
+        <div class="guide-page" id="guidePage1">
+          <div class="guide-step-header">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-title">${d.wkly_guide_s2_title || (ko ? '📊 랭킹 표 읽는 방법 (1/2)' : '📊 How to Read the Ranking (1/2)')}</div>
+          </div>
+          <div class="guide-step-desc">${ko ? '각 컬럼이 어떤 데이터를 의미하는지 확인하세요.' : 'See what each column in the ranking table means.'}</div>
+          <div class="guide-col-list">
+            <div class="guide-col-item">
+              <div class="guide-col-name">🏰 ${ko?'이계 (합산)':'Laby (Sum)'}</div>
+              <div class="guide-col-desc">${ko
+                ? '이계 미궁 주간 기록을<br>모두 합산한 값'
+                : 'Sum of all weekly<br>Labyrinth scores'}</div>
             </div>
-            <div class="guide-mock-row">
-              <span class="guide-mock-label">🥈 ${ko?'디로저':'Dirozer'}</span>
-              <span class="guide-mock-val">${ko?'합산 60점':'60 pts'}</span>
-              <span style="color:#aaa;font-size:10px;">→ <b style="color:#f4c430;">33.3%</b> → ${ko?'33박스':'33 boxes'}</span>
+            <div class="guide-col-item">
+              <div class="guide-col-name">⚔️ ${ko?'명결 (합산)':'Duel (Sum)'}</div>
+              <div class="guide-col-desc">${ko
+                ? '명예의 결투 주간 기록을<br>모두 합산한 값'
+                : 'Sum of all weekly<br>Honor Duel scores'}</div>
             </div>
-            <div class="guide-mock-row">
-              <span class="guide-mock-label">🥉 spike</span>
-              <span class="guide-mock-val">${ko?'합산 40점':'40 pts'}</span>
-              <span style="color:#aaa;font-size:10px;">→ <b style="color:#f4c430;">22.2%</b> → ${ko?'22박스':'22 boxes'}</span>
+            <div class="guide-col-item">
+              <div class="guide-col-name">🎯 ${ko?'활약도 (합산)':'Activity (Sum)'}</div>
+              <div class="guide-col-desc">${ko
+                ? '길드 활약도 주간 기록을<br>모두 합산한 값'
+                : 'Sum of all weekly<br>Guild Activity scores'}</div>
             </div>
           </div>
-          <div class="guide-tip">
-            ${d.wkly_guide_s3_tip || (ko
-              ? '💡 많이 기록할수록, 높은 점수일수록 더 많은 보상을 받습니다!'
-              : '💡 More records & higher scores = more rewards!')}
+        </div>
+
+        <!-- PAGE 2: 랭킹 표 읽는 방법 (컬럼 4~6) + 계산 예시 -->
+        <div class="guide-page" id="guidePage2">
+          <div class="guide-step-header">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-title">${ko ? '📊 랭킹 표 읽는 방법 (2/2)' : '📊 How to Read the Ranking (2/2)'}</div>
+          </div>
+          <div class="guide-col-list">
+            <div class="guide-col-item">
+              <div class="guide-col-name highlight">⭐ ${ko?'합산 점수':'Total Score'}</div>
+              <div class="guide-col-desc">${ko
+                ? '이계 + 명결 + 활약도를<br>모두 합친 주간 총점'
+                : 'Laby + Duel + Activity<br>combined weekly total'}</div>
+            </div>
+            <div class="guide-col-item">
+              <div class="guide-col-name">📈 ${ko?'기여도':'Contribution'}</div>
+              <div class="guide-col-desc">${ko
+                ? '내 점수 ÷ 전체 합계 × 100%<br>(높을수록 더 많은 보상을 받습니다)'
+                : 'My score ÷ total × 100%<br>(higher = more reward)'}</div>
+            </div>
+            <div class="guide-col-item">
+              <div class="guide-col-name green">📦 ${ko?'예상 분배량':'Est. Reward'}</div>
+              <div class="guide-col-desc green">${ko
+                ? '총 보상량 × 내 기여도 비율<br>(예: 기여도 44% → 전체의 44% 수령)'
+                : 'Total reward × my contribution %<br>(e.g. 44% → receive 44% of total)'}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <div class="guide-step-header">
+              <div class="guide-step-num">3</div>
+              <div class="guide-step-title">${d.wkly_guide_s3_title || (ko ? '📦 보상 분배 계산 예시' : '📦 Reward Distribution Example')}</div>
+            </div>
+            <div class="guide-step-desc" style="margin-bottom:8px;">${ko?'총 보상 100박스, 3명이 참여한 경우':'Total 100 boxes, 3 participants'}</div>
+            <div class="guide-mock">
+              <div class="guide-mock-row">
+                <span class="guide-mock-label">🥇 ${ko?'갓빌라':'GodVilla'}</span>
+                <span class="guide-mock-val">${ko?'합산 80점':'80 pts'}</span>
+                <span class="guide-mock-calc">→ 80/(80+60+40) = <b style="color:#f4c430;">44.4%</b> → ${ko?'44박스':'44 boxes'}</span>
+              </div>
+              <div class="guide-mock-row">
+                <span class="guide-mock-label">🥈 ${ko?'디로저':'Dirozer'}</span>
+                <span class="guide-mock-val">${ko?'합산 60점':'60 pts'}</span>
+                <span class="guide-mock-calc">→ <b style="color:#f4c430;">33.3%</b> → ${ko?'33박스':'33 boxes'}</span>
+              </div>
+              <div class="guide-mock-row">
+                <span class="guide-mock-label">🥉 spike</span>
+                <span class="guide-mock-val">${ko?'합산 40점':'40 pts'}</span>
+                <span class="guide-mock-calc">→ <b style="color:#f4c430;">22.2%</b> → ${ko?'22박스':'22 boxes'}</span>
+              </div>
+            </div>
+            <div class="guide-tip">
+              ${ko?'💡 많이 기록할수록, 높은 점수일수록 더 많은 보상을 받습니다!':'💡 More records & higher scores = more rewards!'}
+            </div>
           </div>
         </div>
-      </div>
 
-      <hr class="guide-divider">
-
-      <!-- 운영진 전용 -->
-      <div style="margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:700;color:#ff8a80;margin-bottom:8px;">
-          ${d.wkly_guide_staff_title || (ko ? '🛠️ 운영진 전용 기능 안내' : '🛠️ Staff-Only Features')}
-        </div>
-        <div class="guide-mock">
-          <div style="margin-bottom:8px;font-size:11px;color:#aaa;">
+        <!-- PAGE 3: 운영진 전용 기능 -->
+        <div class="guide-page" id="guidePage3">
+          <div style="font-size:14px; font-weight:700; color:#ff8a80; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+            🛠️ ${d.wkly_guide_staff_title || (ko ? '운영진 전용 기능 안내' : 'Staff-Only Features')}
+          </div>
+          <div class="guide-step-desc" style="margin-bottom:10px;">
             ${d.wkly_guide_staff_note || (ko ? '운영진/관리자에게만 보이는 기능입니다.' : 'Visible to staff/admin only.')}
           </div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:flex-start;gap:8px;">
-              <span style="color:#f4c430;font-size:12px;font-weight:bold;min-width:20px;">①</span>
-              <div>
-                <div style="color:#fff;font-size:11px;font-weight:bold;">
-                  ${d.wkly_guide_staff_1_title || (ko ? '총 보상량 입력' : 'Enter Total Reward')}
-                </div>
-                <div style="color:#888;font-size:10px;">
-                  ${d.wkly_guide_staff_1_desc || (ko
-                    ? '이번 주 실제 박스 수량을 입력하면 예상 분배량이 자동 계산됩니다.'
-                    : 'Enter this week\'s actual box count to auto-calculate estimated distribution.')}
+          <div class="guide-mock">
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div style="display:flex; align-items:flex-start; gap:10px;">
+                <span style="color:#f4c430; font-size:14px; font-weight:bold; min-width:22px; line-height:1.4;">①</span>
+                <div>
+                  <div style="color:#fff; font-size:13px; font-weight:bold; margin-bottom:4px;">
+                    ${d.wkly_guide_staff_1_title || (ko ? '총 보상량 입력' : 'Enter Total Reward')}
+                  </div>
+                  <div style="color:#aaa; font-size:12px; line-height:1.7; word-break:keep-all;">
+                    ${d.wkly_guide_staff_1_desc || (ko
+                      ? '이번 주 실제 박스 수량을 입력하면,<br>각 멤버의 예상 분배량이 자동으로 계산됩니다.'
+                      : 'Enter this week\'s actual box count<br>to auto-calculate each member\'s estimated distribution.')}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:8px;">
-              <span style="color:#f4c430;font-size:12px;font-weight:bold;min-width:20px;">②</span>
-              <div>
-                <div style="color:#fff;font-size:11px;font-weight:bold;">
-                  ${d.wkly_guide_staff_2_title || (ko ? '기록 확정 및 저장' : 'Finalize & Save Record')}
-                </div>
-                <div style="color:#888;font-size:10px;">
-                  ${d.wkly_guide_staff_2_desc || (ko
-                    ? '이번 주 결산을 공식 기록으로 확정합니다. 확정 후 수정 불가!'
-                    : 'Finalize this week\'s settlement as the official record. Cannot be edited after!')}
+              <div style="display:flex; align-items:flex-start; gap:10px;">
+                <span style="color:#f4c430; font-size:14px; font-weight:bold; min-width:22px; line-height:1.4;">②</span>
+                <div>
+                  <div style="color:#fff; font-size:13px; font-weight:bold; margin-bottom:4px;">
+                    ${d.wkly_guide_staff_2_title || (ko ? '기록 확정 및 저장' : 'Finalize & Save Record')}
+                  </div>
+                  <div style="color:#aaa; font-size:12px; line-height:1.7; word-break:keep-all;">
+                    ${d.wkly_guide_staff_2_desc || (ko
+                      ? '이번 주 결산을 공식 기록으로 확정합니다.<br>⚠️ 확정 후에는 수정이 불가능합니다!'
+                      : 'Finalize this week\'s settlement as the official record.<br>⚠️ Cannot be edited after confirmation!')}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <button onclick="closeWeeklyGuide()" style="width:100%; padding:14px; background:#2a3242; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:8px; font-size:14px;">
-        ${d.weekly_guide_close || (ko ? '✅ 알겠습니다!' : '✅ Got it!')}
-      </button>
+      </div><!-- /guide-pages-wrap -->
+
+      <!-- 하단 네비게이션 버튼 -->
+      <div class="guide-nav" id="guideNavBtns">
+        <button class="guide-nav-btn prev" id="guidePrevBtn" onclick="guideNavStep(-1)" style="display:none;">
+          ← ${ko?'이전':'Prev'}
+        </button>
+        <button class="guide-nav-btn next" id="guideNextBtn" onclick="guideNavStep(1)">
+          ${ko?'다음':'Next'} →
+        </button>
+      </div>
     `;
     document.getElementById('weeklyGuideModal').style.display = 'flex';
   }
+
+  function guideNavStep(dir) {
+    const lang = localStorage.getItem('roider_lang') || 'ko';
+    const ko = lang === 'ko';
+    const prev = _guidePage;
+    _guidePage = Math.max(0, Math.min(_GUIDE_TOTAL - 1, _guidePage + dir));
+    if (prev === _guidePage) return;
+
+    // 페이지 전환
+    document.getElementById(`guidePage${prev}`).classList.remove('active');
+    document.getElementById(`guidePage${_guidePage}`).classList.add('active');
+
+    // 도트 업데이트
+    document.querySelectorAll('.guide-dot').forEach((dot, i) => {
+      dot.classList.toggle('active', i === _guidePage);
+    });
+
+    // 스크롤 맨 위로
+    const wrap = document.getElementById('guidePagesWrap');
+    if (wrap) wrap.scrollTop = 0;
+
+    // 버튼 상태
+    const prevBtn = document.getElementById('guidePrevBtn');
+    const nextBtn = document.getElementById('guideNextBtn');
+    prevBtn.style.display = _guidePage === 0 ? 'none' : 'block';
+
+    if (_guidePage === _GUIDE_TOTAL - 1) {
+      nextBtn.textContent = ko ? '✅ 알겠습니다!' : '✅ Got it!';
+      nextBtn.classList.remove('next');
+      nextBtn.classList.add('close-btn');
+      nextBtn.onclick = closeWeeklyGuide;
+    } else {
+      nextBtn.textContent = (ko ? '다음' : 'Next') + ' →';
+      nextBtn.classList.remove('close-btn');
+      nextBtn.classList.add('next');
+      nextBtn.onclick = () => guideNavStep(1);
+    }
+  }
+
   function closeWeeklyGuide() {
     document.getElementById('weeklyGuideModal').style.display = 'none';
   }

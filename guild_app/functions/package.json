@@ -1,6 +1,6 @@
 {
   "name": "roider-guild-functions",
-  "description": "ROIDER GUILD Firebase Cloud Functions",
+  "description": "Phoenix Guild Firebase Cloud Functions",
   "scripts": {
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",

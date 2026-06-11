@@ -10,9 +10,11 @@
   <link rel="dns-prefetch" href="https://ui-avatars.com">
 
   <meta charset="UTF-8" />
-  <meta name="description" content="ROIDER 길드원 목록 - 멤버 현황 및 온라인 상태">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="description" content="Phoenix 길드원 목록 - 멤버 현황 및 온라인 상태">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - Members List</title>
+  <title>Phoenix Guild - Members List</title>
   
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css">
@@ -23,8 +25,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <script src="i18n.js" defer></script>
-  <script src="i18n_added.js" defer></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
 
   <style>
     /* 기본 배경 및 폰트 */
@@ -59,7 +61,7 @@
     }
 
     /* [전체 레이아웃 구성] */
-    .app-container { display: flex; padding-top: 80px; min-height: 100vh; }
+    .app-container { display: flex; padding-top: 100px; min-height: 100vh; }
 
     /* [사이드바 - PC 상시 노출 / 모바일 슬라이드] */
     nav { 
@@ -283,8 +285,8 @@
 <header>
   <div class="header-left">
     <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
-    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   <div class="user-box">
     <button class="header-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,0.05); border:1px solid #444; color:#ccc; padding:5px 10px; border-radius:20px; font-size:11px; cursor:pointer;">🌐 KO</button>
   </div>
@@ -323,6 +325,8 @@
         </div>
       </div>
 
+      <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
       <a href="members.html" class="nav-link active" data-i18n="menu_members">길드원 목록</a>
       <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
     </div>
