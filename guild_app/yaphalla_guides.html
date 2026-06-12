@@ -294,278 +294,75 @@ let hasMore        = true;
 let lbImages       = [];
 let lbIndex        = 0;
 
+// ── 로딩 오버레이 숨김 ─────────────────────
+function hideLoading(){
+  const overlay = document.getElementById('loadingOverlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
 // ── 인증 ──────────────────────────────────
 firebase.auth().onAuthStateChanged(function(user){
-  if(!user){ location.href='login.html'; return; }
-  firebase.firestore().collection('users').doc(user.uid).get().then(doc=>{
-    if(!doc.exists){ location.href='login.html'; return; }
-    const d = doc.data();
-    if(!d.approved){ location.href='pending.html'; return; }
 
-    document.getElementById('userName').textContent = d.nickname||user.displayName||'?';
-    const roleEl = document.getElementById('myRoleBadge');
-    if(roleEl){
-      const r = d.role||'member';
-      roleEl.textContent = r==='admin'?'관리자':r==='manager'?'운영진':'길드원';
-      roleEl.className   = r==='admin'?'role-badge role-admin':r==='manager'?'role-badge role-staff':'role-badge role-member';
-      if(r==='admin'||r==='manager'){
-        const m = document.getElementById('navAdminMenu');
-        if(m) m.style.display='';
-      }
-    }
-    document.getElementById('profileChangeBtn').style.display='';
-
-    function hideLoading() {
-  const overlay = document.getElementById('loadingOverlay');
-  if (overlay) overlay.style.display = 'none';
-}
-}
-    startFeed();
-    if(typeof hideLoading==='function') hideLoading();
-  }).catch(()=>{ location.href='login.html'; });
-});
-
-// ── 초기 피드 로드 ─────────────────────────
-function startFeed(){
-  isLoading = true;
-
-  firebase.firestore()
-    .collection(COLLECTION)
-    .where('visible','==',true)
-    .orderBy('discordTimestamp','desc')
-    .limit(PAGE_SIZE)
-.onSnapshot(snap=>{
-    document.getElementById('skeletonArea').style.display='none';
-
-    allPosts = [];
-    snap.forEach(doc => allPosts.push({ id: doc.id, ...doc.data() }));
-    lastDoc = snap.docs[snap.docs.length - 1] || null;
-    hasMore = snap.docs.length >= PAGE_SIZE;
-
-    renderFeed();
-    isLoading = false;
-    hideLoading();
-
-}, err=>{
-    console.error('Feed error:', err);
-    document.getElementById('skeletonArea').style.display='none';
-    isLoading = false;
-    hideLoading();
-});
-}
-
-// ── 더보기 ────────────────────────────────
-async function loadMore(){
-  if(isLoading || !hasMore || !lastDoc) return;
-  isLoading = true;
-  const btn = document.getElementById('loadMoreBtn');
-  btn.disabled = true;
-  btn.textContent = '불러오는 중...';
-
-  try{
-    const snap = await firebase.firestore()
-      .collection(COLLECTION)
-      .where('visible','==',true)
-      .orderBy('discordTimestamp','desc')
-      .startAfter(lastDoc)
-      .limit(PAGE_SIZE)
-      .get();
-
-    const newPosts = [];
-    snap.forEach(doc => newPosts.push({ id: doc.id, ...doc.data() }));
-    lastDoc = snap.docs[snap.docs.length - 1] || lastDoc;
-    hasMore = snap.docs.length >= PAGE_SIZE;
-
-    allPosts = [...allPosts, ...newPosts];
-    renderFeed();
-  }catch(e){
-    console.error('LoadMore error:', e);
-  }
-
-  isLoading = false;
-  btn.disabled = false;
-  btn.textContent = '더 보기';
-}
-
-// ── 피드 렌더링 ───────────────────────────
-function renderFeed(){
-  const feed  = document.getElementById('feedList');
-  const empty = document.getElementById('emptyState');
-  const lmw   = document.getElementById('loadMoreWrap');
-
-  if(allPosts.length === 0){
-    feed.style.display  = 'none';
-    empty.style.display = 'block';
-    lmw.style.display   = 'none';
+  if(!user){
+    location.href='login.html';
     return;
   }
 
-  empty.style.display = 'none';
-  feed.innerHTML = allPosts.map(buildCard).join('');
-  feed.style.display = '';
+  firebase.firestore()
+    .collection('users')
+    .doc(user.uid)
+    .get()
+    .then(doc=>{
 
-  lmw.style.display = hasMore ? '' : 'none';
-}
+      if(!doc.exists){
+        location.href='login.html';
+        return;
+      }
 
-// ── 카드 빌더 ─────────────────────────────
-function buildCard(p){
-  /* 아바타 */
-  const avHtml = p.authorAvatar
-    ? `<img src="${escH(p.authorAvatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-    : `<span>${escH((p.authorName||'?')[0].toUpperCase())}</span>`;
+      const d = doc.data();
 
-  /* 날짜 */
-  const dateStr = fmtDate(p.discordTimestamp || p.createdAt);
+      if(!d.approved){
+        location.href='pending.html';
+        return;
+      }
 
-  /* 채널 뱃지 */
-  const channelHtml = p.channelName
-    ? `<span class="card-channel">#${escH(p.channelName)}</span>` : '';
+      document.getElementById('userName').textContent =
+        d.nickname || user.displayName || '?';
 
-  /* 본문 */
-  const bodyHtml = p.content
-    ? `<div class="card-body-text">${formatContent(p.content)}</div>` : '';
+      const roleEl = document.getElementById('myRoleBadge');
 
-  /* 이미지 그리드 */
-  const imgs = p.imageUrls || [];
-  let imgsHtml = '';
-  if(imgs.length > 0){
-    const postId = escH(p.id);
-    const allImgsJson = escH(JSON.stringify(imgs));
-    if(imgs.length === 1){
-      imgsHtml = `<div class="card-images"><div class="img-grid-1">
-        <img src="${escH(imgs[0])}" alt="" loading="lazy"
-             onclick="openLightbox(${allImgsJson},0)"
-             onerror="this.parentElement.style.display='none'">
-      </div></div>`;
-    } else {
-      const gridClass = imgs.length === 2 ? 'img-grid-2'
-                      : imgs.length === 3 ? 'img-grid-3' : 'img-grid-4';
-      const showCount = imgs.length <= 4 ? imgs.length : 4;
-      const tiles = imgs.slice(0, showCount).map((url, i) => {
-        const isLast = imgs.length > 4 && i === 3;
-        const inner  = `<img src="${escH(url)}" alt="" loading="lazy"
-                             onclick="openLightbox(${allImgsJson},${i})"
-                             onerror="this.parentElement.style.display='none'">`;
-        if(isLast){
-          return `<div class="img-more-wrap" onclick="openLightbox(${allImgsJson},3)">
-            ${inner}
-            <div class="img-more-overlay">+${imgs.length - 3}</div>
-          </div>`;
+      if(roleEl){
+        const r = d.role || 'member';
+
+        roleEl.textContent =
+          r==='admin' ? '관리자' :
+          r==='manager' ? '운영진' :
+          '길드원';
+
+        roleEl.className =
+          r==='admin'
+            ? 'role-badge role-admin'
+            : r==='manager'
+            ? 'role-badge role-staff'
+            : 'role-badge role-member';
+
+        if(r==='admin' || r==='manager'){
+          const m = document.getElementById('navAdminMenu');
+          if(m) m.style.display='';
         }
-        return inner;
-      }).join('');
-      imgsHtml = `<div class="card-images"><div class="${gridClass}">${tiles}</div></div>`;
-    }
-  }
+      }
 
-  return `
-  <div class="feed-card" data-id="${escH(p.id)}">
-    <div class="card-header">
-      <div class="card-avatar">${avHtml}</div>
-      <div class="card-author-info">
-        <div class="card-author">${escH(p.authorName||'?')}</div>
-        <div class="card-date">${dateStr}</div>
-      </div>
-      ${channelHtml}
-    </div>
-    ${bodyHtml}
-    ${imgsHtml}
-  </div>`;
-}
+      document.getElementById('profileChangeBtn').style.display='';
 
-// ── 라이트박스 ────────────────────────────
-function openLightbox(imgsJson, startIdx){
-  try{
-    lbImages = typeof imgsJson === 'string' ? JSON.parse(imgsJson) : imgsJson;
-  }catch(e){ return; }
-  lbIndex = startIdx || 0;
-  updateLightbox();
-  document.getElementById('lightbox').classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
+      startFeed();
 
-function updateLightbox(){
-  const img  = document.getElementById('lbImg');
-  const cnt  = document.getElementById('lbCounter');
-  const prev = document.getElementById('lbPrev');
-  const next = document.getElementById('lbNext');
-  img.src    = lbImages[lbIndex] || '';
-  cnt.textContent = lbImages.length > 1 ? `${lbIndex+1} / ${lbImages.length}` : '';
-  prev.style.display = lbImages.length > 1 ? '' : 'none';
-  next.style.display = lbImages.length > 1 ? '' : 'none';
-}
+    })
+    .catch(err=>{
+      console.error(err);
+      location.href='login.html';
+    });
 
-function lbDir(dir){
-  lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
-  updateLightbox();
-}
-
-function closeLightbox(){
-  document.getElementById('lightbox').classList.remove('active');
-  document.body.style.overflow = '';
-}
-
-function handleLbClick(e){
-  if(e.target === document.getElementById('lightbox')) closeLightbox();
-}
-
-// ── 텍스트 포맷 ───────────────────────────
-function formatContent(t){
-  if(!t) return '';
-  let s = escH(t);
-  // 볼드 **text**
-  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-  // 이탤릭 *text*
-  s = s.replace(/\*([^*\n]+?)\*/g, '<i>$1</i>');
-  // URL 링크화
-  s = s.replace(/(https?:\/\/[^\s<>"'\)\]]+)/g,
-    '<a href="$1" target="_blank" rel="noopener">$1</a>');
-  // 줄바꿈
-  s = s.replace(/\n/g, '<br>');
-  return `<p>${s}</p>`;
-}
-
-// ── 날짜 포맷 ─────────────────────────────
-function fmtDate(ts){
-  try{
-    let d;
-    if(ts && ts.toDate)      d = ts.toDate();
-    else if(ts && ts.seconds) d = new Date(ts.seconds * 1000);
-    else if(typeof ts === 'number') d = new Date(ts);
-    else return '';
-    const now  = new Date();
-    const diff = Math.floor((now - d) / 1000);
-    if(diff < 60)    return '방금 전';
-    if(diff < 3600)  return Math.floor(diff/60) + '분 전';
-    if(diff < 86400) return Math.floor(diff/3600) + '시간 전';
-    if(diff < 604800)return Math.floor(diff/86400) + '일 전';
-    const mo = String(d.getMonth()+1).padStart(2,'0');
-    const dy = String(d.getDate()).padStart(2,'0');
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    return `${d.getFullYear()}.${mo}.${dy} ${hh}:${mm}`;
-  }catch(e){ return ''; }
-}
-
-// ── HTML 이스케이프 ───────────────────────
-function escH(s){
-  if(s == null) return '';
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
-// ── 키보드 단축키 ─────────────────────────
-document.addEventListener('keydown', e => {
-  const lb = document.getElementById('lightbox');
-  if(!lb.classList.contains('active')) return;
-  if(e.key === 'Escape')      closeLightbox();
-  if(e.key === 'ArrowLeft')   lbDir(-1);
-  if(e.key === 'ArrowRight')  lbDir(1);
 });
-
-// ── 공통 ─────────────────────────────────
-function logout(){ firebase.auth().signOut().then(()=>{ location.href='login.html'; }); }
 function toggleNav(){ document.getElementById('sidebar')?.classList.toggle('open'); }
 function toggleLangPage(){
   const c = localStorage.getItem('roider_lang')||'ko';
