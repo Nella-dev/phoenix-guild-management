@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   firebase-messaging-sw.js  —  ROIDER GUILD  FCM Service Worker  v2.0
+   firebase-messaging-sw.js  —  Phoenix Guild  FCM Service Worker  v2.0
    ═══════════════════════════════════════════════════════════════════════════
 
    이 파일은 반드시 웹 루트(/)에 위치해야 합니다.
@@ -74,7 +74,7 @@ console.log(`[FCM SW] v${SW_VERSION} 초기화 완료`);
       - 백그라운드 / 종료 시: showNotification + 열린 탭에도 postMessage
    ═══════════════════════════════════════════════════════════════════════════ */
 async function _handlePush(title, body, data) {
-  const notifTitle   = title || '📢 ROIDER GUILD 공지';
+  const notifTitle   = title || '📢 Phoenix Guild 공지';
   const notifBody    = body  || '새 공지사항이 등록되었습니다.';
   const targetUrl    = (data && data.url) ? data.url : NOTICE_URL;
   const noticeId     = (data && data.noticeId) ? data.noticeId : '';
@@ -159,7 +159,7 @@ self.addEventListener('push', (event) => {
   // payload 없으면 기본 알림
   if (!event.data) {
     event.waitUntil(
-      _handlePush('📢 ROIDER GUILD', '새 공지사항이 있습니다.', { url: NOTICE_URL })
+      _handlePush('📢 Phoenix Guild', '새 공지사항이 있습니다.', { url: NOTICE_URL })
     );
     return;
   }
@@ -182,7 +182,7 @@ self.addEventListener('push', (event) => {
     }
     // data-only FCM 형식
     else if (parsed.data) {
-      title = parsed.data.title || '📢 ROIDER GUILD 공지';
+      title = parsed.data.title || '📢 Phoenix Guild 공지';
       body  = parsed.data.body  || parsed.data.content || '새 공지사항이 등록되었습니다.';
       data  = {
         url:      parsed.data.url      || NOTICE_URL,
@@ -192,13 +192,13 @@ self.addEventListener('push', (event) => {
     }
     // 기타 형식
     else {
-      title = parsed.title || '📢 ROIDER GUILD';
+      title = parsed.title || '📢 Phoenix Guild';
       body  = parsed.body  || '새 공지사항이 있습니다.';
       data  = { url: parsed.url || NOTICE_URL };
     }
   } catch (_) {
     // JSON 파싱 실패 → 텍스트로 처리
-    title = '📢 ROIDER GUILD 공지';
+    title = '📢 Phoenix Guild 공지';
     body  = event.data.text() || '새 공지사항이 등록되었습니다.';
     data  = { url: NOTICE_URL };
   }

@@ -1,5 +1,6 @@
 // firebase_config.js - 인증 도메인 충돌 및 세션 유실 방어 최종본
 // ✅ [수정] isLoginPg 조건에 index.html 및 루트 경로(/) 추가 (SDK v10.8.0 통일 대응)
+// ✅ [Bug2 Fix] 외부 브라우저 무한 로그인 루프 수정 - sessionStorage 기반 redirect 플래그 + 초기 대기 로직 개선
 
 if (typeof firebaseConfig !== 'undefined') {
   try {
@@ -35,34 +36,45 @@ function logout() {
 /**
  * 🚨 전역 인증 감시자
  */
-// ✅ 리다이렉트 중복 방지 플래그 (페이지 전환 시작 후 재처리 방지)
+// ✅ sessionStorage 기반 redirect 플래그 (페이지 간 이동 후에도 안전하게 리셋)
+// in-memory 플래그는 페이지 reload 시 자동 초기화되므로 외부 브라우저 루프 방지에 적합
 let _authRedirecting = false;
+let _authInitialized = false;  // 첫 번째 onAuthStateChanged 호출 여부 추적
 
 auth.onAuthStateChanged(async (user) => {
   if (_authRedirecting) return;
 
   const path = window.location.pathname;
-  const isLoginPg = path.includes("login.html") || path.includes("index.html") || path === "/" || path.endsWith("/");
+  // Cloudflare Pages / 로컬 / 일반 브라우저 경로 모두 커버
+  const isLoginPg = path.includes("login.html") || path.includes("index.html")
+                    || path === "/" || path.endsWith("/")
+                    || path.endsWith("/login") || path.endsWith("/index");
   const isNicknamePg = path.includes("nickname.html");
   const isPendingPg = path.includes("pending.html");
 
-  console.log("Current Auth State:", user ? "LoggedIn (" + user.uid + ")" : "LoggedOut");
+  console.log("Current Auth State:", user ? "LoggedIn (" + user.uid + ")" : "LoggedOut",
+              "| initialized:", _authInitialized);
 
   // 1. 로그아웃 상태 처리
   if (!user) {
+    if (!_authInitialized) {
+      // ✅ 첫 번째 call이 null인 경우: Firebase가 세션을 아직 복원하지 못한 상태일 수 있음
+      // → _authInitialized를 true로 마킹하고, 두 번째 call을 기다림 (redirect 보류)
+      _authInitialized = true;
+      console.log("Auth first call: user=null — waiting for session restore...");
+      return;
+    }
+    // 두 번째 이후 call에서 여전히 null이면 진짜 로그아웃 상태
     if (!isLoginPg && !isNicknamePg && !isPendingPg) {
-      console.log("Checking session... Waiting 3s");
-
-      // [핵심] 브라우저가 세션을 불러오는 시간을 확보하여 무한 루프 방지
-      setTimeout(() => {
-        if (!auth.currentUser) {
-          console.warn("No user found. Redirecting to login.html");
-          location.replace("login.html");
-        }
-      }, 3000);
+      console.warn("No user found after session check. Redirecting to login.html");
+      _authRedirecting = true;
+      location.replace("login.html");
     }
     return;
   }
+
+  // user가 있으면 initialized 마킹
+  _authInitialized = true;
 
   // 2. 로그인 상태 처리
   try {
@@ -72,16 +84,39 @@ auth.onAuthStateChanged(async (user) => {
 
     // 신규 유저 데이터 생성 로직
     if (!docSnap.exists) {
-      if (!isNicknamePg) {
-        console.log("New user - redirection to nickname.html");
-        await userRef.set({
-          uid: user.uid,
-          email: user.email,
-          nickname: "",
-          role: "pending",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        location.replace("nickname.html");
+      const isDiscordUser = user.uid && user.uid.startsWith('discord:');
+
+      if (isDiscordUser) {
+        // Discord 유저 — Cloud Functions에서 이미 users 문서 생성 + 권한 부여됨
+        // 문서가 없으면 잠시 기다린 후 재시도 (Functions 처리 지연 대비)
+        console.log("[Discord] users 문서 대기 중...");
+        await new Promise(r => setTimeout(r, 1500));
+        const retrySnap = await userRef.get();
+        if (retrySnap.exists) {
+          const d = retrySnap.data();
+          const target = !d.nickname ? "nickname.html" : "main.html";
+          console.log("[Discord] 문서 확인됨 → " + target);
+          location.replace(target);
+        } else {
+          // 여전히 없으면 nickname.html로 보내기
+          console.log("[Discord] 문서 미생성 → nickname.html");
+          location.replace("nickname.html");
+        }
+      } else {
+        // Google 등 일반 유저 — pending으로 생성 후 nickname.html
+        if (!isNicknamePg) {
+          console.log("New user - redirection to nickname.html");
+          await userRef.set({
+            uid: user.uid,
+            email: user.email || null,
+            nickname: "",
+            role: "pending",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          location.replace("nickname.html");
+        } else {
+          _authRedirecting = false;
+        }
       }
       return;
     }
@@ -107,7 +142,8 @@ auth.onAuthStateChanged(async (user) => {
       return;
     }
 
-    // 4. UI 업데이트 실행
+    // 4. UI 업데이트 실행 (리다이렉트 없는 정상 케이스 → 플래그 해제)
+    _authRedirecting = false;
     if (typeof updateGlobalUI === 'function') {
       updateGlobalUI(data, user);
     }
@@ -143,8 +179,6 @@ auth.onAuthStateChanged(async (user) => {
         userRef.update(update).catch(() => {});
       });
     }
-
-    _authRedirecting = false;
   } catch (e) {
     console.error("Firestore Critical Error:", e.code, e.message);
     _authRedirecting = false;

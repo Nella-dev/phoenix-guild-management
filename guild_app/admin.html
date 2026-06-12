@@ -9,9 +9,11 @@
   <link rel="dns-prefetch" href="https://ui-avatars.com">
 
   <meta charset="UTF-8" />
-  <meta name="description" content="ROIDER 길드 관리자 - 권한 관리 및 멤버 승인">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="description" content="Phoenix 길드 관리자 - 권한 관리 및 멤버 승인">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - Admin</title>
+  <title>Phoenix Guild - Admin</title>
   
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css">
@@ -22,6 +24,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
   <script src="i18n.js"></script>
   <script src="i18n_added.js"></script>
 
@@ -276,8 +280,8 @@
 <header>
   <div class="header-left">
     <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
-    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   <div class="user-box">
     <button class="header-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,.05);border:1px solid #444;color:#ccc;padding:5px 10px;border-radius:20px;font-size:11px;cursor:pointer;">🌐 KO</button>
   </div>
@@ -289,11 +293,11 @@
   <nav id="sideNav" class="side-nav">
     <div class="sidebar-user-info">
       <button class="close-nav" onclick="toggleNav(false)">×</button>
-      <div class="profile-edit-wrap" onclick="location.href='profile_select.html'" title="프로필 변경">
+      <div class="profile-edit-wrap" onclick="openProfileModal()" title="프로필 변경">
         <img id="sidebarUserPhoto" src="" alt="profile" />
         <div class="profile-edit-badge">✎</div>
       </div>
-      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+      <button class="profile-change-btn" onclick="openProfileModal()" data-i18n="btn_profile_change">✎ 프로필 변경</button>
       <div class="user-name-box">
         <span id="sidebarUserName" class="u-name">...</span>
         <span id="sidebarUserBadge" class="role-badge" style="display:none;"></span>
@@ -317,6 +321,8 @@
         </div>
       </div>
 
+      <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
       <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
       <a href="admin.html" class="nav-link active" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
     </div>
@@ -685,7 +691,7 @@
     const uRole    = (u.role || 'pending').toLowerCase();
     const isPending = uRole === 'pending';
 
-    const T = (key, fallback) => (window.i18n?.[lang]?.[key]) || fallback;
+    const T = (key, fallback) => { const v = window.i18n?.[lang]?.[key]; return (v !== undefined && v !== null) ? v : (window.i18n?.['en']?.[key] ?? fallback); };
     const tApp  = T('adm_btn_approve',        lang==='ko'?'승인':'Approve');
     const tDemP = T('adm_btn_demote_pending', lang==='ko'?'대기 강등':'Demote');
     const tMan  = T('adm_btn_manager',        lang==='ko'?'운영진 임명':'→ Manager');
@@ -842,13 +848,31 @@
 
     if (triggerBtn) triggerBtn.classList.add('loading');
     try {
+      // ✅ [Bug3 Fix] 삭제 전 자신의 admin role 재확인 (Firestore rules와 동기화)
+      const myDoc = await db.collection('users').doc(myUid).get();
+      if (!myDoc.exists || myDoc.data().role !== 'admin') {
+        showToast(lang==='ko'?'관리자 권한이 없습니다.':'Admin permission required.','error');
+        return;
+      }
+      // 본인 계정 삭제 방지
+      if (uid === myUid) {
+        showToast(lang==='ko'?'자신의 계정은 삭제할 수 없습니다.':'Cannot delete your own account.','error');
+        return;
+      }
       await db.collection('users').doc(uid).delete();
       showToast(
         lang==='ko' ? `🗑️ '${nickname}' 유저가 삭제되었습니다.` : `🗑️ User '${nickname}' has been deleted.`,
         'success', 3000
       );
+      // UI에서 해당 카드 제거
+      const card = triggerBtn ? triggerBtn.closest('.user-card') : null;
+      if (card) card.remove();
     } catch(e) {
-      showToast(lang==='ko'?'삭제 중 오류가 발생했습니다.':'Error occurred during deletion.','error');
+      console.error('deleteUser error:', e.code, e.message);
+      const errMsg = e.code === 'permission-denied'
+        ? (lang==='ko'?'권한이 부족합니다. Firestore 규칙을 확인해주세요.':'Permission denied. Check Firestore rules.')
+        : (lang==='ko'?'삭제 중 오류가 발생했습니다.':'Error occurred during deletion.');
+      showToast(errMsg,'error');
     } finally {
       if (triggerBtn) triggerBtn.classList.remove('loading');
     }

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <meta charset="UTF-8"/>
+  <meta name="description" content="얍할라 가이드 - Discord yaphalla-guides 채널 실시간 피드">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Phoenix Guild - 얍할라 가이드</title>
+  <link rel="stylesheet" href="header_standard.css">
+  <link rel="stylesheet" href="common_style.css">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+  <script src="push_manager.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="i18n_added.js" defer></script>
+<style>
+/* ── 헤더 ───────────────────────────────────────── */
+header{display:flex!important;justify-content:space-between!important;align-items:center!important;
+  padding:10px 15px!important;background:#121721!important;border-bottom:1px solid #2a3242!important;
+  min-height:clamp(48px,8vw,60px)!important;box-sizing:border-box!important;position:fixed!important;
+  top:0!important;width:100%;z-index:2000!important;box-shadow:0 2px 10px rgba(0,0,0,.3)!important;}
+.header-left{display:flex!important;align-items:center!important;gap:12px!important;}
+.logo{white-space:nowrap!important;color:#f4c430;font-weight:bold;font-size:clamp(14px,3vw,18px);text-decoration:none;}
+
+/* ── 페이지 타이틀 ───────────────────────────────── */
+.page-hdr{margin-bottom:clamp(18px,3vw,28px);}
+.page-hdr h2{color:#f4c430;font-size:clamp(17px,3.8vw,23px);margin:0 0 5px;
+  font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.page-hdr p{color:#666;font-size:clamp(11px,2vw,13px);margin:0;}
+
+/* ── LIVE 뱃지 ───────────────────────────────────── */
+.live-badge{display:inline-flex;align-items:center;gap:4px;
+  background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);
+  border-radius:20px;padding:2px 9px;font-size:clamp(9px,1.6vw,11px);color:#00e676;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#00e676;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── 피드 리스트 (최신글 맨 위, 세로 피드) ───────── */
+.feed-list{display:flex;flex-direction:column;gap:clamp(14px,3vw,20px);}
+
+/* ── 피드 카드 ───────────────────────────────────── */
+.feed-card{
+  background:#13171f;
+  border:1px solid #1e2535;
+  border-radius:clamp(10px,2vw,16px);
+  overflow:hidden;
+  transition:border-color .25s, box-shadow .25s;
+}
+.feed-card:hover{
+  border-color:#2e3a52;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+
+/* 카드 헤더 — 작성자 정보 */
+.card-header{
+  display:flex;align-items:center;gap:10px;
+  padding:clamp(12px,2.5vw,16px) clamp(12px,2.5vw,18px) 0;
+}
+.card-avatar{
+  width:clamp(32px,5vw,40px);height:clamp(32px,5vw,40px);
+  border-radius:50%;overflow:hidden;flex-shrink:0;
+  background:linear-gradient(135deg,#5865f2,#eb459e);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(13px,2.2vw,16px);font-weight:bold;color:#fff;
+}
+.card-avatar img{width:100%;height:100%;object-fit:cover;}
+.card-author-info{flex:1;min-width:0;}
+.card-author{font-size:clamp(12px,2.2vw,14px);font-weight:600;color:#c0c8d8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-date{font-size:clamp(10px,1.7vw,12px);color:#444;margin-top:2px;}
+.card-channel{font-size:clamp(9px,1.5vw,11px);background:rgba(88,101,242,.12);
+  color:#7083c0;border:1px solid rgba(88,101,242,.2);border-radius:10px;
+  padding:2px 8px;white-space:nowrap;flex-shrink:0;}
+
+/* 카드 본문 */
+.card-body-text{
+  padding:clamp(10px,2vw,14px) clamp(12px,2.5vw,18px);
+  font-size:clamp(12px,2.2vw,14px);color:#b8c5d0;
+  line-height:1.75;word-break:break-word;
+}
+.card-body-text a{color:#7db3ff;text-decoration:none;word-break:break-all;}
+.card-body-text a:hover{text-decoration:underline;}
+.card-body-text b{color:#e6e6e6;}
+
+/* 이미지 그리드 */
+.card-images{padding:0 clamp(12px,2.5vw,18px) clamp(12px,2.5vw,16px);}
+.img-grid-1 img{width:100%;border-radius:10px;display:block;cursor:pointer;
+  max-height:480px;object-fit:contain;background:#0d1018;}
+.img-grid-2,.img-grid-3,.img-grid-4{display:grid;gap:4px;}
+.img-grid-2{grid-template-columns:1fr 1fr;}
+.img-grid-3{grid-template-columns:1fr 1fr 1fr;}
+.img-grid-4{grid-template-columns:1fr 1fr;}
+.img-grid-2 img,.img-grid-3 img,.img-grid-4 img{
+  width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;cursor:pointer;
+  display:block;transition:opacity .2s;}
+.img-grid-2 img:hover,.img-grid-3 img:hover,.img-grid-4 img:hover{opacity:.85;}
+/* 4개 이상일 때 마지막에 +N 오버레이 */
+.img-more-wrap{position:relative;display:block;}
+.img-more-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(16px,3vw,22px);font-weight:bold;color:#fff;pointer-events:none;}
+
+/* ── 이미지 라이트박스 ───────────────────────────── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+  z-index:9000;align-items:center;justify-content:center;}
+.lightbox.active{display:flex;}
+.lb-img{max-width:94vw;max-height:92vh;object-fit:contain;border-radius:8px;display:block;}
+.lb-close{position:absolute;top:14px;right:18px;background:rgba(255,255,255,.12);
+  border:none;color:#fff;font-size:22px;width:40px;height:40px;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.lb-close:hover{background:rgba(255,255,255,.25);}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.1);border:none;color:#fff;width:44px;height:44px;
+  border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;}
+.lb-nav:hover{background:rgba(255,255,255,.25);}
+.lb-prev{left:14px;} .lb-next{right:14px;}
+.lb-counter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:#fff;font-size:13px;padding:4px 14px;border-radius:20px;}
+
+/* ── 스켈레톤 ───────────────────────────────────── */
+.sk-card{background:#13171f;border:1px solid #1e2535;border-radius:clamp(10px,2vw,16px);
+  overflow:hidden;padding:clamp(12px,2.5vw,16px);}
+.sk{background:#1c2230;border-radius:6px;animation:shimmer 1.6s infinite;}
+.sk-av{width:38px;height:38px;border-radius:50%;flex-shrink:0;}
+.sk-line{height:12px;margin-bottom:8px;}
+@keyframes shimmer{0%{opacity:.35}50%{opacity:.6}100%{opacity:.35}}
+
+/* 빈 상태 */
+.empty-state{text-align:center;padding:70px 20px;color:#444;}
+.empty-icon{font-size:52px;margin-bottom:14px;}
+.empty-state p{font-size:clamp(12px,2.2vw,14px);line-height:1.7;}
+
+/* 로드 더보기 */
+.load-more-wrap{text-align:center;margin-top:clamp(16px,3vw,24px);}
+.load-more-btn{padding:clamp(10px,2vw,13px) clamp(24px,4vw,36px);
+  background:rgba(255,255,255,.06);color:#aaa;border:1px solid #2a3242;
+  border-radius:8px;font-size:clamp(13px,2.3vw,14px);cursor:pointer;transition:all .2s;}
+.load-more-btn:hover{background:rgba(255,255,255,.12);color:#fff;}
+.load-more-btn:disabled{opacity:.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"></div></div>
+
+<!-- 헤더 -->
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" id="menuTrigger" onclick="toggleNav()" aria-label="메뉴">☰</button>
+    <a href="main.html" class="logo">⚔️ Phoenix</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="lang-toggle" id="langToggle" onclick="toggleLangPage()" title="언어 전환">🌐 EN</button>
+    <button class="profile-change-btn" id="profileChangeBtn" style="display:none;"
+            onclick="openProfileModal()" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+  </div>
+</header>
+
+<!-- 사이드바 -->
+<div class="app-container">
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-user-info">
+    <div id="userAvatar" class="user-avatar"
+         style="width:40px;height:40px;border-radius:50%;background:#2a3242;
+                display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px;">👤</div>
+    <span id="userName" class="u-name">...</span>
+    <span id="myRoleBadge" class="role-badge"></span>
+  </div>
+  <button class="logout-btn" data-i18n="menu_logout" onclick="logout()"
+    style="width:100%;padding:10px;font-size:13px;border:1px solid #444;
+           background:rgba(255,255,255,.05);color:#ccc;border-radius:8px;cursor:pointer;">로그아웃</button>
+  <div class="nav-container">
+    <a href="main.html"   class="nav-link" data-i18n="menu_home">홈</a>
+    <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+    <div class="nav-folder">
+      <div class="nav-folder-header" id="navFolderWeekly">
+        <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+        <span class="nav-folder-arrow">▶</span>
+      </div>
+      <div class="nav-folder-children" id="navFolderWeeklyChildren">
+        <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+        <a href="weekly.html"     class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+      </div>
+    </div>
+    <a href="yaphalla_infographics.html" class="nav-link" data-i18n="menu_infographics">얍할라 종합 인포그래픽</a>
+    <a href="yaphalla_guides.html"       class="nav-link active" data-i18n="menu_yaphalla_guides">얍할라 가이드</a>
+    <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+    <a href="admin.html"   class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+  </div>
+  <script>
+  (function(){
+    var K='roider_nav_weekly_open',h=document.getElementById('navFolderWeekly'),
+        c=document.getElementById('navFolderWeeklyChildren');
+    if(!h||!c)return;
+    var isOpen=localStorage.getItem(K)==='1';
+    function setOpen(v){h.classList.toggle('open',v);c.style.maxHeight=v?c.scrollHeight+'px':'0';
+      c.style.overflow='hidden';localStorage.setItem(K,v?'1':'0');}
+    c.style.transition='max-height .3s ease';c.style.overflow='hidden';setOpen(isOpen);
+    h.addEventListener('click',function(){setOpen(!h.classList.contains('open'));});
+  })();
+  </script>
+</nav>
+
+<!-- 메인 콘텐츠 -->
+<main class="main-content">
+  <div class="page-hdr">
+    <h2 data-i18n="menu_yaphalla_guides">
+      📖 얍할라 가이드
+      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    </h2>
+    <p data-i18n="yaphalla_guides_subtitle">Discord #yaphalla-guides 채널 글이 실시간으로 반영됩니다</p>
+  </div>
+
+  <!-- 스켈레톤 로딩 -->
+  <div id="skeletonArea" class="feed-list">
+    <div class="sk-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="sk sk-av"></div>
+        <div style="flex:1;"><div class="sk sk-line" style="width:30%;margin-bottom:6px;"></div><div class="sk sk-line" style="width:20%;height:10px;"></div></div>
+      </div>
+      <div class="sk sk-line" style="width:90%;"></div>
+      <div class="sk sk-line" style="width:75%;"></div>
+      <div class="sk sk-line" style="width:50%;"></div>
+    </div>
+    <div class="sk-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="sk sk-av"></div>
+        <div style="flex:1;"><div class="sk sk-line" style="width:35%;margin-bottom:6px;"></div><div class="sk sk-line" style="width:22%;height:10px;"></div></div>
+      </div>
+      <div class="sk sk-line" style="width:85%;"></div>
+      <div class="sk sk-line" style="width:70%;"></div>
+    </div>
+    <div class="sk-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="sk sk-av"></div>
+        <div style="flex:1;"><div class="sk sk-line" style="width:28%;margin-bottom:6px;"></div><div class="sk sk-line" style="width:18%;height:10px;"></div></div>
+      </div>
+      <div class="sk sk-line" style="width:95%;"></div>
+      <div class="sk sk-line" style="width:60%;"></div>
+    </div>
+  </div>
+
+  <!-- 피드 -->
+  <div class="feed-list" id="feedList" style="display:none;"></div>
+
+  <!-- 더보기 버튼 -->
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()">더 보기</button>
+  </div>
+
+  <!-- 빈 상태 -->
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="empty-icon">📖</div>
+    <p>아직 표시할 가이드가 없습니다.<br>
+       <span style="color:#333;font-size:12px;">Discord #yaphalla-guides 채널에서<br>메시지를 수신하면 자동으로 여기에 표시됩니다.</span></p>
+  </div>
+</main>
+</div>
+
+<!-- ── 이미지 라이트박스 ─────────────────────────── -->
+<div class="lightbox" id="lightbox" onclick="handleLbClick(event)">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <button class="lb-nav lb-prev" id="lbPrev" onclick="lbDir(-1)">‹</button>
+  <img class="lb-img" id="lbImg" src="" alt="">
+  <button class="lb-nav lb-next" id="lbNext" onclick="lbDir(1)">›</button>
+  <div class="lb-counter" id="lbCounter"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  얍할라 가이드 — Discord 실시간 피드
+//  Firestore 컬렉션: yaphalla_guide_posts
+//  최신글 맨 위, 이미지 그리드, 라이트박스
+// ════════════════════════════════════════════
+
+const COLLECTION   = 'yaphalla_guide_posts';
+const PAGE_SIZE    = 20;
+
+let allPosts       = [];
+let lastDoc        = null;
+let isLoading      = false;
+let hasMore        = true;
+
+// ── 라이트박스 상태 ────────────────────────
+let lbImages       = [];
+let lbIndex        = 0;
+
+// ── 로딩 오버레이 숨김 ─────────────────────
+function hideLoading(){
+  const overlay = document.getElementById('loadingOverlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
+// ── 인증 ──────────────────────────────────
+firebase.auth().onAuthStateChanged(function(user){
+
+  if(!user){
+    location.href='login.html';
+    return;
+  }
+
+  firebase.firestore()
+    .collection('users')
+    .doc(user.uid)
+    .get()
+    .then(doc=>{
+
+      if(!doc.exists){
+        location.href='login.html';
+        return;
+      }
+
+      const d = doc.data();
+
+      if(!d.approved){
+        location.href='pending.html';
+        return;
+      }
+
+      document.getElementById('userName').textContent =
+        d.nickname || user.displayName || '?';
+
+      const roleEl = document.getElementById('myRoleBadge');
+
+      if(roleEl){
+        const r = d.role || 'member';
+
+        roleEl.textContent =
+          r==='admin' ? '관리자' :
+          r==='manager' ? '운영진' :
+          '길드원';
+
+        roleEl.className =
+          r==='admin'
+            ? 'role-badge role-admin'
+            : r==='manager'
+            ? 'role-badge role-staff'
+            : 'role-badge role-member';
+
+        if(r==='admin' || r==='manager'){
+          const m = document.getElementById('navAdminMenu');
+          if(m) m.style.display='';
+        }
+      }
+
+      document.getElementById('profileChangeBtn').style.display='';
+
+      startFeed();
+      hideLoading();
+
+  }).catch(function(err){
+  console.error(err);
+  location.href='login.html';
+});
+
+});
+function toggleNav(){ document.getElementById('sidebar')?.classList.toggle('open'); }
+function toggleLangPage(){
+  const c = localStorage.getItem('roider_lang')||'ko';
+  localStorage.setItem('roider_lang', c==='ko'?'en':'ko');
+  location.reload();
+}
+</script>
+</body>
+</html>

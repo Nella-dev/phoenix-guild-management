@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  🔍  ROIDER GUILD — GeoIP 현황 리포트 스크립트
+ *  🔍  Phoenix Guild — GeoIP 현황 리포트 스크립트
  *  geoip_report.js
  *
  *  실행: node geoip_report.js

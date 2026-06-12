@@ -27,6 +27,7 @@
       menu_history: "📜 결산 내역",
       menu_strategy: "🗺️ 작전 지도",
       menu_members: "👥 길드원 목록",
+      menu_deckbuilder: "🃏 덱 빌딩 제작소",
       menu_admin: "🛡️ 권한 관리",
       menu_logout: "🚪 로그아웃",
       btn_logout: "로그아웃",
@@ -53,12 +54,14 @@
       main_card_weekly_desc: "기여도에 따라 배분된 이번 주 보상을 확인하세요.",
       main_card_strategy: "🗺️ 대항전 작전 지도",
       main_card_strategy_desc: "실시간 작전 지시와 타겟 정보를 지도에서 확인하세요. (현재 내부공사 중...)",
+      main_card_deckbuilder: "🃏 덱 빌딩 제작소",
+      main_card_deckbuilder_desc: "Yaphalla 에디터로 최적의 덱을 설계하세요.",
       main_card_members: "👥 길드원 목록",
       main_card_members_desc: "우리 길드원들의 정보와 활동 현황을 확인하세요.",
       main_card_admin: "🛡️ 인원 승인 및 권한 관리",
       main_card_admin_desc: "신규 길드원 승인 및 등급 설정을 관리합니다.",
 
-      guide_title: "🚩 ROIDER 길드 이용 가이드",
+      guide_title: "🚩 Phoenix 길드 이용 가이드",
       guide_calendar_desc: "매일 자신의 점수를 입력하세요. 누락 시 주간 보상 산정에서 제외될 수 있습니다.",
       guide_strategy_desc: "작전 지도의 핀(Marker)은 실시간 명령입니다. 공격 전 반드시 확인하세요.",
       guide_weekly_desc: "매주 일요일 밤, 활동량을 기반으로 보상 상자가 자동 계산되어 표시됩니다.",
@@ -218,7 +221,7 @@
       mem_online: "온라인",
       mem_offline: "오프라인",
 
-      login_title: "ROIDER 길드",
+      login_title: "Phoenix 길드",
       login_google: "Google 로그인",
       login_with_google: "구글 계정으로 로그인",
       login_nick_prompt: "닉네임을 등록하세요",
@@ -264,6 +267,7 @@
       menu_history: "📜 Settlement History",
       menu_strategy: "🗺️ Strategy Map",
       menu_members: "👥 Members",
+      menu_deckbuilder: "🃏 Deck Builder",
       menu_admin: "🛡️ Admin",
       menu_logout: "🚪 Logout",
       btn_logout: "Logout",
@@ -290,12 +294,14 @@
       main_card_weekly_desc: "Check your rewards based on this week's contribution.",
       main_card_strategy: "🗺️ Battle Strategy Map",
       main_card_strategy_desc: "Check real-time orders and target info on the map. (Under Construction...)",
+      main_card_deckbuilder: "🃏 Deck Builder",
+      main_card_deckbuilder_desc: "Design the best deck with the Yaphalla editor.",
       main_card_members: "👥 Member List",
       main_card_members_desc: "View guild member info and activity status.",
       main_card_admin: "🛡️ Approval & Role Management",
       main_card_admin_desc: "Manage new member approvals and role settings.",
 
-      guide_title: "🚩 ROIDER Guild Guide",
+      guide_title: "🚩 Phoenix Guild Guide",
       guide_calendar_desc: "Enter your score daily. Failure may exclude you from weekly rewards.",
       guide_strategy_desc: "Markers on the map are real-time orders. Check them before attacking.",
       guide_weekly_desc: "Every Sunday night, rewards are auto-calculated based on activity.",
@@ -455,7 +461,7 @@
       mem_online: "Online",
       mem_offline: "Offline",
 
-      login_title: "ROIDER Guild",
+      login_title: "Phoenix Guild",
       login_google: "Sign in with Google",
       login_with_google: "Sign in with your Google account",
       login_nick_prompt: "Register Nickname",
@@ -537,7 +543,7 @@
       weekly_me_badge: "Moi",
       noti_title: "📢 Annonces de Guilde",
       noti_empty: "Aucune annonce disponible.",
-      login_title: "Guilde ROIDER",
+      login_title: "Guilde Phoenix",
       login_with_google: "Se connecter avec Google",
       adm_title: "🛡️ Gestion des Rôles",
       adm_btn_approve: "Approuver",
@@ -605,7 +611,7 @@
       weekly_me_badge: "Ich",
       noti_title: "📢 Gilden-Ankündigungen",
       noti_empty: "Keine Ankündigungen verfügbar.",
-      login_title: "ROIDER Gilde",
+      login_title: "Phoenix Gilde",
       login_with_google: "Mit Google anmelden",
       adm_title: "🛡️ Rollenverwaltung",
       adm_btn_approve: "Genehmigen",
@@ -673,7 +679,7 @@
       weekly_me_badge: "Io",
       noti_title: "📢 Annunci della Gilda",
       noti_empty: "Nessun annuncio disponibile.",
-      login_title: "Gilda ROIDER",
+      login_title: "Gilda Phoenix",
       login_with_google: "Accedi con Google",
       adm_title: "🛡️ Gestione Ruoli",
       adm_btn_approve: "Approva",
@@ -741,7 +747,7 @@
       weekly_me_badge: "Yo",
       noti_title: "📢 Anuncios del Clan",
       noti_empty: "No hay anuncios disponibles.",
-      login_title: "Clan ROIDER",
+      login_title: "Clan Phoenix",
       login_with_google: "Iniciar sesión con Google",
       adm_title: "🛡️ Gestión de Roles",
       adm_btn_approve: "Aprobar",
@@ -809,7 +815,7 @@
       weekly_me_badge: "我",
       noti_title: "📢 公会公告",
       noti_empty: "暂无公告。",
-      login_title: "ROIDER 公会",
+      login_title: "Phoenix 公会",
       login_with_google: "使用Google账号登录",
       adm_title: "🛡️ 权限管理",
       adm_btn_approve: "批准",
@@ -877,7 +883,7 @@
       weekly_me_badge: "我",
       noti_title: "📢 公會公告",
       noti_empty: "暫無公告。",
-      login_title: "ROIDER 公會",
+      login_title: "Phoenix 公會",
       login_with_google: "使用Google帳號登入",
       adm_title: "🛡️ 權限管理",
       adm_btn_approve: "批准",
@@ -945,7 +951,7 @@
       weekly_me_badge: "自分",
       noti_title: "📢 ギルドお知らせ",
       noti_empty: "お知らせはありません。",
-      login_title: "ROIDERギルド",
+      login_title: "Phoenixギルド",
       login_with_google: "Googleアカウントでログイン",
       adm_title: "🛡️ 権限管理",
       adm_btn_approve: "承認",
@@ -1013,7 +1019,7 @@
       weekly_me_badge: "Eu",
       noti_title: "📢 Avisos da Guilda",
       noti_empty: "Nenhum aviso disponível.",
-      login_title: "Guilda ROIDER",
+      login_title: "Guilda Phoenix",
       login_with_google: "Entrar com Google",
       adm_title: "🛡️ Gerenciamento de Funções",
       adm_btn_approve: "Aprovar",
@@ -1036,6 +1042,11 @@
 
   // ─── applyLanguage ─────────────────────────────────────────────────────────
   window.applyLanguage = function () {
+    // ✅ localStorage와 window.currentLang 동기화 (타 언어 번역 미적용 버그 수정)
+    const savedLang = localStorage.getItem("roider_lang");
+    if (savedLang && savedLang !== window.currentLang) {
+      window.currentLang = savedLang;
+    }
     const lang = window.currentLang;
     const dict = window.i18n[lang] || window.i18n['en'];
     if (!dict) return;

@@ -6,7 +6,7 @@
   <meta charset="UTF-8"/>
   <meta name="description" content="얍할라 종합 인포그래픽 - AFK Journey 덱 빌딩 가이드">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - 얍할라 종합 인포그래픽</title>
+  <title>Phoenix Guild - 얍할라 종합 인포그래픽</title>
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css">
   <link rel="manifest" href="manifest.json">
@@ -16,6 +16,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
   <script src="push_manager.js"></script>
   <script src="i18n.js" defer></script>
@@ -241,12 +243,12 @@ header{display:flex!important;justify-content:space-between!important;align-item
 <header>
   <div class="header-left">
     <button class="menu-trigger" id="menuTrigger" onclick="toggleNav()" aria-label="메뉴">☰</button>
-    <a href="main.html" class="logo">⚔️ ROIDER</a>
+    <a href="main.html" class="logo">⚔️ Phoenix</a>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button class="lang-toggle" id="langToggle" onclick="toggleLangPage()" title="언어 전환">🌐 EN</button>
     <button class="profile-change-btn" id="profileChangeBtn" style="display:none;"
-            onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+            onclick="openProfileModal()" data-i18n="btn_profile_change">✎ 프로필 변경</button>
   </div>
 </header>
 
@@ -277,6 +279,7 @@ header{display:flex!important;justify-content:space-between!important;align-item
       </div>
     </div>
     <a href="yaphalla_infographics.html" class="nav-link active" data-i18n="menu_infographics">얍할라 종합 인포그래픽</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
     <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
     <a href="admin.html"   class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
   </div>

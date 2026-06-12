@@ -10,9 +10,11 @@
   <link rel="dns-prefetch" href="https://ui-avatars.com">
 
   <meta charset="UTF-8" />
-  <meta name="description" content="ROIDER 길드 공지사항 - 최신 소식 및 업데이트">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="description" content="Phoenix 길드 공지사항 - 최신 소식 및 업데이트">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - 공지사항</title>
+  <title>Phoenix Guild - 공지사항</title>
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css"> 
   <link rel="manifest" href="manifest.json">
@@ -23,11 +25,13 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
   <!-- FCM 메시징 SDK (푸시 알림) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
   <script src="push_manager.js"></script>
-  <script src="i18n.js" defer></script>
-  <script src="i18n_added.js" defer></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
   
   <style>
     /* 로딩 오버레이 */
@@ -75,7 +79,7 @@
     /* [전체 레이아웃 구성] */
     .app-container {
       display: flex;
-      padding-top: 80px;
+      padding-top: 100px;
       min-height: 100vh;
     }
 
@@ -244,13 +248,13 @@
 </head>
 <body>
 
-<div id="loadingOverlay">ROIDER GUILD Loading...</div>
+<div id="loadingOverlay">Phoenix Guild Loading...</div>
 
 <header>
   <div class="header-left">
     <button class="menu-trigger" onclick="toggleNav(true)">☰</button>
-    <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
   <div class="user-box">
     <button class="logout-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,0.05); border:1px solid #444; color:#ccc; padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer;">🌐 KO</button>
   </div>
@@ -263,7 +267,7 @@
     <div class="sidebar-user-info">
       <button class="close-nav" onclick="toggleNav(false)">×</button>
       <img id="userPhoto" src="" alt="profile" />
-      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+      <button class="profile-change-btn" onclick="openProfileModal()" data-i18n="btn_profile_change">✎ 프로필 변경</button>
       <div class="user-name-box">
         <span id="userName" class="u-name">...</span>
         <span id="myRoleBadge" class="role-badge"></span>
@@ -288,6 +292,8 @@
         </div>
       </div>
 
+      <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html"       class="nav-link" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
       <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
       <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
     </div>
@@ -440,55 +446,71 @@
     }
   }
 
-  auth.onAuthStateChanged(async user => {
-    if (!user) return location.replace("login.html");
+  // ✅ [Bug Fix] firebase_config.js의 중앙 인증 시스템과 통합
+  // 자체 onAuthStateChanged 대신 updateGlobalUI 훅 방식으로 변경
+  window._noticePageInit = false;
+
+  function initNoticePage(user, data) {
+    if (window._noticePageInit) return;
+    window._noticePageInit = true;
+
     myUid = user.uid;
-    try {
-      const snap = await db.collection("users").doc(user.uid).get();
-      if (!snap.exists || snap.data().role === "pending") return location.replace("pending.html");
-      
-      const data = snap.data();
-      myNickname = data.nickname;
-      myRole = (data.role || "member").toLowerCase();
+    myNickname = data.nickname;
+    myRole = (data.role || "member").toLowerCase();
 
-      document.getElementById("loadingOverlay").style.display = "none";
-      document.getElementById("userName").textContent = myNickname || "User";
-      // 공지 읽음 처리 (뱃지 초기화)
-      if (typeof markNoticeRead === 'function') markNoticeRead(db, user.uid);
-      
-      const photoEl = document.getElementById("userPhoto");
-      if (photoEl) {
-        photoEl.src = data.customPhotoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(myNickname || 'U')}&background=2a3242&color=f4c430&bold=true`;
-        // 계급 테두리 적용
-        photoEl.className = `border-${myRole}`;
-      }
-      
-      const badgeEl = document.getElementById("myRoleBadge");
-      if (badgeEl && myRole) {
-        badgeEl.textContent = myRole.toUpperCase();
-        badgeEl.className = `role-badge role-${myRole.toUpperCase()}`;
-        badgeEl.style.display = "inline-block";
-      }
+    document.getElementById("loadingOverlay").style.display = "none";
+    document.getElementById("userName").textContent = myNickname || "User";
+    // 공지 읽음 처리 (뱃지 초기화)
+    if (typeof markNoticeRead === 'function') markNoticeRead(db, user.uid);
+    
+    const photoEl = document.getElementById("userPhoto");
+    if (photoEl) {
+      photoEl.src = data.customPhotoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(myNickname || 'U')}&background=2a3242&color=f4c430&bold=true`;
+      photoEl.className = `border-${myRole}`;
+    }
+    
+    const badgeEl = document.getElementById("myRoleBadge");
+    if (badgeEl && myRole) {
+      badgeEl.textContent = myRole.toUpperCase();
+      badgeEl.className = `role-badge role-${myRole.toUpperCase()}`;
+      badgeEl.style.display = "inline-block";
+    }
 
-      updateLangButton();
-      if (typeof applyLanguage === 'function') applyLanguage();
+    updateLangButton();
+    if (typeof applyLanguage === 'function') applyLanguage();
 
-      if (myRole === "admin" || myRole === "manager") {
-        document.getElementById("adminWriteBtn").style.display = "block";
-        const navAdmin = document.getElementById("navAdminMenu");
-        if (navAdmin) navAdmin.style.display = "block";
-      }
-      
-      loadNotice();
+    if (myRole === "admin" || myRole === "manager") {
+      document.getElementById("adminWriteBtn").style.display = "block";
+      const navAdmin = document.getElementById("navAdminMenu");
+      if (navAdmin) navAdmin.style.display = "block";
+    }
+    
+    loadNotice();
 
-      // 푸시 알림 초기화
-      if (window.PushManager) {
-        PushManager.init(db, user.uid);
-        PushManager.initPushBanner();
-        _updatePushUI();
+    // 푸시 알림 초기화
+    if (window.PushManager) {
+      PushManager.init(db, user.uid);
+      PushManager.initPushBanner();
+      _updatePushUI();
+    }
+  }
+
+  // firebase_config.js의 updateGlobalUI 훅 오버라이드
+  const _origUpdateGlobalUI = window.updateGlobalUI;
+  window.updateGlobalUI = function(data, user) {
+    if (typeof _origUpdateGlobalUI === 'function') _origUpdateGlobalUI(data, user);
+    initNoticePage(user, data);
+  };
+
+  // 이미 로그인 상태인 경우 직접 초기화 (빠른 재방문 대응)
+  const _currentUser = auth.currentUser;
+  if (_currentUser) {
+    db.collection("users").doc(_currentUser.uid).get().then(snap => {
+      if (snap.exists && snap.data().role !== "pending") {
+        initNoticePage(_currentUser, snap.data());
       }
-    } catch (err) { console.error(err); showToast('오류가 발생했습니다.', 'error'); }
-  });
+    }).catch(err => console.error("notice init error:", err));
+  }
 
   // ✅ [버그수정] 공지 데이터 캐시 맵 (editNoticeById에서 사용)
   const noticeDataMap = {};

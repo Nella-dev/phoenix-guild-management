@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Discord 로그인 처리 중...</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1015;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .box {
+      text-align: center;
+      padding: 40px 30px;
+      max-width: 320px;
+    }
+
+    /* Discord 로고 펄스 */
+    .discord-logo {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      animation: logoPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes logoPulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.08); }
+    }
+
+    .status-text {
+      font-size: 16px;
+      color: #c9d1d9;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .sub-text {
+      font-size: 13px;
+      color: #4a5568;
+      line-height: 1.6;
+    }
+
+    /* 스피너 */
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #2a3242;
+      border-top-color: #5865F2;
+      border-radius: 50%;
+      margin: 20px auto 0;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 에러 상태 */
+    .error-box {
+      display: none;
+      background: #2a1215;
+      border: 1px solid #5c2025;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .error-box .err-title {
+      color: #f87171;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .error-box .err-msg {
+      font-size: 13px;
+      color: #fca5a5;
+    }
+    .btn-retry {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: #5865F2;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-retry:hover { background: #4752c4; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <!-- Discord 로고 -->
+    <svg class="discord-logo" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60.1 4.9A58.6 58.6 0 0 0 45.5 0c-.6 1.2-1.4 2.7-1.9 4a54 54 0 0 0-16.3 0C26.8 2.7 26 1.2 25.3 0A58.5 58.5 0 0 0 10.7 5C1.5 18.6-.9 31.9.3 45a59 59 0 0 0 18 9.1c1.5-2 2.8-4.1 3.9-6.4a38.3 38.3 0 0 1-6.1-3c.5-.4 1-.7 1.5-1.1a42 42 0 0 0 35.8 0c.5.4 1 .7 1.5 1.1a38.3 38.3 0 0 1-6.1 3c1.1 2.3 2.4 4.4 3.9 6.4A58.8 58.8 0 0 0 70.7 45C72.1 30 68.3 16.8 60.1 4.9ZM23.7 36.8c-3.5 0-6.4-3.2-6.4-7.1 0-3.9 2.8-7.1 6.4-7.1 3.5 0 6.4 3.2 6.3 7.1 0 3.9-2.8 7.1-6.3 7.1Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.1 0-3.9 2.8-7.1 6.4-7.1 3.5 0 6.4 3.2 6.3 7.1 0 3.9-2.8 7.1-6.3 7.1Z" fill="#5865F2"/>
+    </svg>
+
+    <p class="status-text" id="statusText">Discord 인증 처리 중...</p>
+    <p class="sub-text" id="subText">잠시 후 자동으로 이동합니다.</p>
+    <div class="spinner" id="spinner"></div>
+
+    <div class="error-box" id="errorBox">
+      <p class="err-title">⚠ 인증 오류</p>
+      <p class="err-msg" id="errorMsg"></p>
+      <a href="login.html" class="btn-retry">다시 로그인</a>
+    </div>
+  </div>
+
+  <script>
+  /**
+   * discord_callback.html
+   *
+   * Discord OAuth2 콜백 페이지.
+   * 두 가지 상황을 처리합니다:
+   *
+   * [팝업 모드] login.html이 팝업으로 이 페이지를 열었을 때
+   *   → window.opener.postMessage({ type:'DISCORD_OAUTH_CODE', code, state }) 전송
+   *   → 팝업 자동 닫기
+   *
+   * [리다이렉트 모드] 팝업 차단 시 login.html 자체가 redirect됐을 때
+   *   → login.html로 code+state 파라미터를 달아 리다이렉트
+   */
+
+  (function() {
+    const params   = new URLSearchParams(window.location.search);
+    const code     = params.get('code');
+    const state    = params.get('state');
+    const error    = params.get('error');
+    const errorDesc = params.get('error_description');
+
+    function showError(msg) {
+      document.getElementById('spinner').style.display    = 'none';
+      document.getElementById('statusText').textContent   = '인증 실패';
+      document.getElementById('subText').style.display    = 'none';
+      document.getElementById('errorBox').style.display   = 'block';
+      document.getElementById('errorMsg').textContent     = msg;
+    }
+
+    // ── 에러 케이스 처리 ──
+    if (error) {
+      const errMsg = error === 'access_denied'
+        ? 'Discord 로그인이 취소되었습니다.'
+        : `오류: ${error}${errorDesc ? ' — ' + errorDesc : ''}`;
+
+      // 팝업이면 부모에 에러 전달 후 닫기
+      if (window.opener && !window.opener.closed) {
+        try {
+          window.opener.postMessage({
+            type:  'DISCORD_OAUTH_CODE',
+            error: error,
+            state: state,
+          }, window.location.origin);
+        } catch(e) {}
+        setTimeout(() => window.close(), 800);
+        return;
+      }
+
+      // 리다이렉트 모드: login.html로 복귀
+      location.replace('login.html?discord_error=' + encodeURIComponent(error));
+      return;
+    }
+
+    if (!code) {
+      showError('인증 코드를 받지 못했습니다.');
+      return;
+    }
+
+    // ── 팝업 모드: 부모창에 code 전달 ──
+    if (window.opener && !window.opener.closed) {
+      document.getElementById('statusText').textContent = '✅ 인증 완료!';
+      document.getElementById('subText').textContent    = '창이 자동으로 닫힙니다...';
+      document.getElementById('spinner').style.display  = 'none';
+
+      try {
+        window.opener.postMessage({
+          type:  'DISCORD_OAUTH_CODE',
+          code:  code,
+          state: state,
+        }, window.location.origin);
+      } catch(e) {
+        console.error('[callback] postMessage 실패:', e);
+      }
+
+      // 잠깐 성공 메시지 보여준 후 닫기
+      setTimeout(() => window.close(), 1200);
+      return;
+    }
+
+    // ── 리다이렉트 모드: login.html로 code 전달 ──
+    // (팝업 차단 시, login.html 자체가 Discord로 redirect됐다가 여기로 돌아옴)
+    document.getElementById('statusText').textContent = '로그인 페이지로 이동 중...';
+    location.replace(`login.html?discord_code=${encodeURIComponent(code)}&discord_state=${encodeURIComponent(state || '')}`);
+  })();
+  </script>
+</body>
+</html>
