@@ -334,24 +334,24 @@ function startFeed(){
     .where('visible','==',true)
     .orderBy('discordTimestamp','desc')
     .limit(PAGE_SIZE)
-    .onSnapshot(snap=>{
-      document.getElementById('skeletonArea').style.display='none';
+.onSnapshot(snap=>{
+    document.getElementById('skeletonArea').style.display='none';
 
-      allPosts = [];
-      snap.forEach(doc => allPosts.push({ id: doc.id, ...doc.data() }));
-      lastDoc = snap.docs[snap.docs.length - 1] || null;
-      hasMore = snap.docs.length >= PAGE_SIZE;
+    allPosts = [];
+    snap.forEach(doc => allPosts.push({ id: doc.id, ...doc.data() }));
+    lastDoc = snap.docs[snap.docs.length - 1] || null;
+    hasMore = snap.docs.length >= PAGE_SIZE;
 
-     renderFeed();
-isLoading = false;
-hideLoading();
-    }, err=>{
-  console.error('Feed error:', err);
-  document.getElementById('skeletonArea').style.display='none';
-  isLoading = false;
-  hideLoading();
-}
-    };
+    renderFeed();
+    isLoading = false;
+    hideLoading();
+
+}, err=>{
+    console.error('Feed error:', err);
+    document.getElementById('skeletonArea').style.display='none';
+    isLoading = false;
+    hideLoading();
+});
 }
 
 // ── 더보기 ────────────────────────────────
