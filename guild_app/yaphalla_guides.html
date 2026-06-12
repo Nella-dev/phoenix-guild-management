@@ -317,9 +317,8 @@ firebase.auth().onAuthStateChanged(function(user){
 
     function hideLoading() {
   const overlay = document.getElementById('loadingOverlay');
-  if (overlay) {
-    overlay.style.display = 'none';
-  }
+  if (overlay) overlay.style.display = 'none';
+}
 }
     startFeed();
     if(typeof hideLoading==='function') hideLoading();
@@ -352,7 +351,7 @@ hideLoading();
   isLoading = false;
   hideLoading();
 }
-    });
+    };
 }
 
 // ── 더보기 ────────────────────────────────
