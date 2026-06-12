@@ -1,0 +1,2 @@
+# Railway 배포용 Procfile
+web: node bot.js
