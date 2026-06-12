@@ -315,6 +315,12 @@ firebase.auth().onAuthStateChanged(function(user){
     }
     document.getElementById('profileChangeBtn').style.display='';
 
+    function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+}
     startFeed();
     if(typeof hideLoading==='function') hideLoading();
   }).catch(()=>{ location.href='login.html'; });
@@ -337,12 +343,15 @@ function startFeed(){
       lastDoc = snap.docs[snap.docs.length - 1] || null;
       hasMore = snap.docs.length >= PAGE_SIZE;
 
-      renderFeed();
-      isLoading = false;
+     renderFeed();
+isLoading = false;
+hideLoading();
     }, err=>{
-      console.error('Feed error:', err);
-      document.getElementById('skeletonArea').style.display='none';
-      isLoading = false;
+  console.error('Feed error:', err);
+  document.getElementById('skeletonArea').style.display='none';
+  isLoading = false;
+  hideLoading();
+}
     });
 }
 
