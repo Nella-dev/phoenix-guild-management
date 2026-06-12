@@ -357,10 +357,10 @@ firebase.auth().onAuthStateChanged(function(user){
       startFeed();
       hideLoading();
 
-    }).catch((err=>{
-      console.error(err);
-      location.href='login.html';
-    });
+  }).catch(function(err){
+  console.error(err);
+  location.href='login.html';
+});
 
 });
 function toggleNav(){ document.getElementById('sidebar')?.classList.toggle('open'); }
