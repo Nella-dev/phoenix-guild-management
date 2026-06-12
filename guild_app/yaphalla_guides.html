@@ -355,9 +355,9 @@ firebase.auth().onAuthStateChanged(function(user){
       document.getElementById('profileChangeBtn').style.display='';
 
       startFeed();
+      hideLoading();
 
-    })
-    .catch(err=>{
+    }).catch((err=>{
       console.error(err);
       location.href='login.html';
     });
