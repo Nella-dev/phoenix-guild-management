@@ -157,6 +157,14 @@
         "destination": "/profile_select.html"
       },
       {
+        "source": "/discord_callback.html",
+        "destination": "/discord_callback.html"
+      },
+      {
+        "source": "/discord_config.js",
+        "destination": "/discord_config.js"
+      },
+      {
         "source": "/firebase-messaging-sw.js",
         "destination": "/firebase-messaging-sw.js"
       },

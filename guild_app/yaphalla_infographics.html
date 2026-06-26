@@ -6,7 +6,7 @@
   <meta charset="UTF-8"/>
   <meta name="description" content="얍할라 종합 인포그래픽 - AFK Journey 덱 빌딩 가이드">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER GUILD - 얍할라 종합 인포그래픽</title>
+  <title>Phoenix Guild - 얍할라 종합 인포그래픽</title>
   <link rel="stylesheet" href="header_standard.css">
   <link rel="stylesheet" href="common_style.css">
   <link rel="manifest" href="manifest.json">
@@ -16,6 +16,8 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
   <script src="push_manager.js"></script>
   <script src="i18n.js" defer></script>
@@ -240,45 +242,45 @@ header{display:flex!important;justify-content:space-between!important;align-item
 <!-- 헤더 -->
 <header>
   <div class="header-left">
-    <button class="menu-trigger" id="menuTrigger" onclick="toggleNav()" aria-label="메뉴">☰</button>
-    <a href="main.html" class="logo">⚔️ ROIDER</a>
+    <button class="menu-trigger" id="menuTrigger" onclick="toggleNav(true)" aria-label="Menu">☰</button>
+    <a href="main.html" class="logo">⚔️ Phoenix</a>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <button class="lang-toggle" id="langToggle" onclick="toggleLangPage()" title="언어 전환">🌐 EN</button>
     <button class="profile-change-btn" id="profileChangeBtn" style="display:none;"
-            onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+            onclick="openProfileModal()">✎ Profile</button>
   </div>
 </header>
+
+<!-- 모바일 오버레이 -->
+<div class="overlay" id="overlay" onclick="toggleNav(false)"></div>
 
 <!-- 사이드바 -->
 <div class="app-container">
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-user-info">
-    <div id="userAvatar" class="user-avatar"
-         style="width:40px;height:40px;border-radius:50%;background:#2a3242;
-                display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:8px;">👤</div>
+    <button class="close-nav" onclick="toggleNav(false)">×</button>
+    <img id="userPhoto" src="" alt="profile" onerror="this.style.display='none'">
     <span id="userName" class="u-name">...</span>
     <span id="myRoleBadge" class="role-badge"></span>
   </div>
-  <button class="logout-btn" data-i18n="menu_logout" onclick="logout()"
-    style="width:100%;padding:10px;font-size:13px;border:1px solid #444;
-           background:rgba(255,255,255,.05);color:#ccc;border-radius:8px;cursor:pointer;">로그아웃</button>
+  <button class="logout-btn" onclick="logout()">Logout</button>
   <div class="nav-container">
-    <a href="main.html"   class="nav-link" data-i18n="menu_home">홈</a>
-    <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+    <a href="main.html"   class="nav-link">Home</a>
+    <a href="notice.html" class="nav-link">Notice</a>
     <div class="nav-folder">
       <div class="nav-folder-header" id="navFolderWeekly">
-        <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+        <span class="nav-folder-title">📋 Weekly Records</span>
         <span class="nav-folder-arrow">▶</span>
       </div>
       <div class="nav-folder-children" id="navFolderWeeklyChildren">
-        <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
-        <a href="weekly.html"     class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+        <a href="attendance.html" class="nav-sub-link">📅 Attendance</a>
+        <a href="weekly.html"     class="nav-sub-link">💰 Weekly Results</a>
       </div>
     </div>
-    <a href="yaphalla_infographics.html" class="nav-link active" data-i18n="menu_infographics">얍할라 종합 인포그래픽</a>
-    <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
-    <a href="admin.html"   class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+    <a href="yaphalla_infographics.html" class="nav-link active">Yaphalla Infographics</a>
+    <a href="yaphalla_guides.html"       class="nav-link">Yaphalla Guides</a>
+    <a href="members.html" class="nav-link">Members</a>
+    <a href="admin.html"   class="nav-link" id="navAdminMenu" style="display:none;">Admin</a>
   </div>
   <script>
   (function(){
@@ -360,14 +362,17 @@ firebase.auth().onAuthStateChanged(function(user){
   firebase.firestore().collection('users').doc(user.uid).get().then(doc=>{
     if(!doc.exists){ location.href='login.html'; return; }
     const d=doc.data();
-    if(!d.approved){ location.href='pending.html'; return; }
+    if(!d.role || d.role==='pending'){ location.href='pending.html'; return; }
 
     document.getElementById('userName').textContent = d.nickname||user.displayName||'?';
+    const photoEl=document.getElementById('userPhoto');
+    if(photoEl) photoEl.src = d.customPhotoURL||user.photoURL||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(d.nickname||'?')}&background=2a3242&color=f4c430&bold=true`;
     const roleEl=document.getElementById('myRoleBadge');
     if(roleEl){
       const r=d.role||'member';
-      roleEl.textContent = r==='admin'?'관리자':r==='staff'?'운영진':'길드원';
-      roleEl.className   = r==='admin'?'role-badge role-admin':r==='staff'?'role-badge role-staff':'role-badge role-member';
+      roleEl.textContent = r==='admin'?'Admin':r==='manager'?'Manager':'Member';
+      roleEl.className   = r==='admin'?'role-badge role-admin':r==='manager'?'role-badge role-staff':'role-badge role-member';
       if(r==='admin'||r==='staff'){
         const m=document.getElementById('navAdminMenu');
         if(m) m.style.display='';
@@ -588,7 +593,12 @@ document.addEventListener('keydown',e=>{
 
 // ── 공통 ─────────────────────────────────
 function logout(){firebase.auth().signOut().then(()=>{location.href='login.html';});}
-function toggleNav(){document.getElementById('sidebar')?.classList.toggle('open');}
+function toggleNav(open){
+  const nav=document.getElementById('sidebar');
+  const ov=document.getElementById('overlay');
+  if(open){nav.classList.add('active');ov.classList.add('active');}
+  else{nav.classList.remove('active');ov.classList.remove('active');}
+}
 function toggleLangPage(){
   const c=localStorage.getItem('roider_lang')||'ko';
   localStorage.setItem('roider_lang',c==='ko'?'en':'ko');

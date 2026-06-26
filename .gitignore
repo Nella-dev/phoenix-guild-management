@@ -1,0 +1,20 @@
+# 서비스 계정 키 — 절대 커밋 금지
+guild_app/serviceAccountKey.json
+guild_app/firebase-service-account.json
+guild_app/geoip_updater/serviceAccountKey.json
+guild_app/firebase_key.js
+
+# node_modules
+node_modules/
+guild_app/node_modules/
+guild_app/functions/node_modules/
+guild_app/geoip_updater/node_modules/
+
+# Firebase
+.firebase/
+guild_app/.firebase/
+*.log
+
+# 환경변수
+.env
+.env.*
