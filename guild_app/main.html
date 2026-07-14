@@ -162,9 +162,7 @@
     }
     .u-name { font-size: 17px; font-weight: bold; color: #fff; }
     
-    .close-nav {
-      position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 28px; cursor: pointer; line-height: 1; z-index: 10; padding: 5px; display: none;
-    }
+    /* → CSS moved to common_style.css */
 
     .nav-container { display: flex; flex-direction: column; }
     .nav-link { 
@@ -172,47 +170,7 @@
     }
     .nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
     .nav-link.active { color: #f4c430; background: rgba(244, 196, 48, 0.1); font-weight: bold; }
-    /* ── 주간 컨텐츠 기록부 폴더 메뉴 ── */
-    .nav-folder {}
-    .nav-folder-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 25px;
-      color: #ccc;
-      cursor: pointer;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
-      transition: background 0.2s, color 0.2s;
-      user-select: none;
-      font-size: 15px;
-    }
-    .nav-folder-header:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    .nav-folder-header.open  { color: #f4c430; }
-    .nav-folder-title { display: flex; align-items: center; gap: 8px; }
-    .nav-folder-arrow {
-      font-size: 10px;
-      transition: transform 0.25s;
-      color: #666;
-    }
-    .nav-folder-header.open .nav-folder-arrow { transform: rotate(90deg); color: #f4c430; }
-    .nav-folder-children {
-      overflow: hidden;
-      max-height: 0;
-      transition: max-height 0.28s ease;
-      background: rgba(0,0,0,0.15);
-    }
-    .nav-folder-children.open { max-height: 300px; }
-    .nav-sub-link {
-      display: block;
-      font-size: 14px;
-      padding: 11px 25px 11px 44px;
-      color: #aaa;
-      text-decoration: none;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
-      transition: background 0.15s, color 0.15s;
-    }
-    .nav-sub-link:hover  { background: rgba(255,255,255,0.05); color: #fff; }
-    .nav-sub-link.active { color: #f4c430; background: rgba(244,196,48,0.08); font-weight: 600; }
+    /* → CSS moved to common_style.css */
 
 
     /* [메인 콘텐츠 영역] */
@@ -249,24 +207,7 @@
       .action-btn { flex: 1; justify-content: center; }
     }
 
-    /* ── 프로필 변경 버튼 ── */
-    .profile-change-btn {
-      display: block;
-      width: 100%;
-      margin: 6px 0 4px 0;
-      padding: 5px 0;
-      background: rgba(244,196,48,0.12);
-      color: #f4c430;
-      border: 1px solid rgba(244,196,48,0.35);
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      text-align: center;
-      letter-spacing: 0.3px;
-      transition: background 0.15s;
-    }
-    .profile-change-btn:hover { background: rgba(244,196,48,0.22); }
+    /* → CSS moved to common_style.css */
 
     /* ── N 배지 ────────────────────────────────────────────── */
     .menu-card { position: relative; }  /* 배지 절대 위치 기준 */
