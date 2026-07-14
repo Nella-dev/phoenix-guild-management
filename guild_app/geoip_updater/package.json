@@ -1,7 +1,7 @@
 {
   "name": "roider-geoip-updater",
   "version": "2.0.0",
-  "description": "ROIDER GUILD — GeoIP 일괄 업데이트 도구",
+  "description": "Phoenix Guild — GeoIP 일괄 업데이트 도구",
   "main": "geoip_batch_update.js",
   "scripts": {
     "report":   "node geoip_report.js",

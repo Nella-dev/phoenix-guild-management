@@ -11,7 +11,7 @@
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER 길드 - 작전 지도</title>
+  <title>Phoenix 길드 - 작전 지도</title>
   
   <link rel="stylesheet" href="header_standard.css">
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -20,8 +20,10 @@
   <script src="firebase_key.js"></script>
   <script src="firebase_config.js"></script>
   <script src="ui_utils.js"></script>
-  <script src="i18n.js" defer></script>
-  <script src="i18n_added.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n_added.js"></script>
   <script src="calendar_patch.js" defer></script>
   
   <style>
@@ -29,18 +31,7 @@
   }
     .wrap { max-width: 1000px; margin: 40px auto; padding: 20px; }
     h2 { color: #f4c430; margin-top: 0; margin-bottom: 5px; font-weight: 800; }
-    /* ── 폴더 메뉴 ── */
-    .nav-folder-header { display:flex; align-items:center; justify-content:space-between; padding:14px 25px; color:#ccc; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.03); transition:background .2s,color .2s; user-select:none; font-size:15px; }
-    .nav-folder-header:hover { background:rgba(255,255,255,.05); color:#fff; }
-    .nav-folder-header.open { color:#f4c430; }
-    .nav-folder-title { display:flex; align-items:center; gap:8px; }
-    .nav-folder-arrow { font-size:10px; transition:transform .25s; color:#666; }
-    .nav-folder-header.open .nav-folder-arrow { transform:rotate(90deg); color:#f4c430; }
-    .nav-folder-children { overflow:hidden; max-height:0; transition:max-height .28s ease; background:rgba(0,0,0,.15); }
-    .nav-folder-children.open { max-height:300px; }
-    .nav-sub-link { display:block; font-size:14px; padding:11px 25px 11px 44px; color:#aaa; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.03); transition:background .15s,color .15s; }
-    .nav-sub-link:hover { background:rgba(255,255,255,.05); color:#fff; }
-    .nav-sub-link.active { color:#f4c430; background:rgba(244,196,48,.08); font-weight:600; }
+    /* → CSS moved to common_style.css */
     
     .card { background: #1c1f2a; border-radius: 12px; padding: 20px; border: 1px solid #2a3242; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-top: 20px; }
     
@@ -63,6 +54,22 @@
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
     .modal-content { background: #1c1f2a; width: 90%; max-width: 400px; padding: 30px; border-radius: 20px; border: 1px solid #2a3242; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
 
+    /* ── 사이드바 / 앱 컨테이너 ── */
+    .app-container { display: flex; padding-top: 100px; }
+    nav.sidebar { width: 260px; min-width: 260px; background: var(--nav-bg,rgba(28,31,42,.98)); border-right: 1px solid #2a3242;
+      display: flex; flex-direction: column; gap: 0; height: calc(100vh - 100px); overflow-y: auto;
+      position: sticky; top: 100px; flex-shrink: 0; }
+    .main-content { flex: 1; overflow-y: auto; padding: 30px 24px; box-sizing: border-box; }
+    @media (max-width: 850px) {
+      .app-container { padding-top: 80px; }
+      nav.sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh;
+        z-index: 2100; transition: left .3s ease; box-shadow: 10px 0 30px rgba(0,0,0,.6); }
+      nav.sidebar.active { left: 0; }
+      .main-content { padding: 16px 12px; }
+    }
+    @media (max-width: 500px) {
+      .app-container { padding-top: 68px; }
+    }
     /* ── strategy.html 반응형 ────────────────────────── */
     @media (max-width: 850px) {
       .menu-trigger { display: block !important; }
@@ -113,89 +120,75 @@
       .controls button { padding: 8px 10px !important; font-size: 11px !important; }
     }
 
-    /* ── 프로필 변경 버튼 ── */
-    .profile-change-btn {
-      display: block;
-      width: 100%;
-      margin: 6px 0 4px 0;
-      padding: 5px 0;
-      background: rgba(244,196,48,0.12);
-      color: #f4c430;
-      border: 1px solid rgba(244,196,48,0.35);
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      text-align: center;
-      letter-spacing: 0.3px;
-      transition: background 0.15s;
-    }
-    .profile-change-btn:hover { background: rgba(244,196,48,0.22); }
+    /* → CSS moved to common_style.css */
   </style>
 </head>
 <body>
+<div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"></div></div>
 
-  <header>
+<!-- 헤더 -->
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" onclick="toggleNav(true)" aria-label="Menu">☰</button>
+    <a href="main.html" class="logo">⚔️ Phoenix</a>
+  </div>
   <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
-  <div class="user-box">
-    <img id="userPhoto" src="" alt="profile" />
-      <button class="profile-change-btn" onclick="location.href='profile_select.html'" data-i18n="btn_profile_change">✎ 프로필 변경</button>
-    <span id="userName">...</span>
-    <span id="myRoleBadge" class="my-role-badge" style="display:none;"></span>
-    <button class="logout-btn" id="langBtn" onclick="handleLangChange()">🌐 KO</button>
-    <button class="logout-btn" data-i18n="menu_logout" onclick="logout()">로그아웃</button>
+  <div class="header-right">
+    <button class="profile-change-btn" id="profileChangeBtn" style="display:none;"
+            onclick="openProfileModal()">✎ Profile</button>
   </div>
 </header>
 
-<nav>
-      <div class="nav-container">
-      <a href="main.html" class="nav-link" data-i18n="menu_home">홈</a>
-      <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+<!-- 모바일 오버레이 -->
+<div class="overlay" id="overlay" onclick="toggleNav(false)"></div>
 
-      <!-- 주간 컨텐츠 기록부 폴더 -->
-      <div class="nav-folder">
-        <div class="nav-folder-header" id="navFolderWeekly">
-          <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
-          <span class="nav-folder-arrow">▶</span>
-        </div>
-        <div class="nav-folder-children" id="navFolderWeeklyChildren">
-          <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
-          <a href="weekly.html" class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
-          <a href="history.html" class="nav-sub-link" data-i18n="menu_history">📜 결산 내역</a>
-        </div>
+<!-- 사이드바 -->
+<div class="app-container">
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-user-info">
+    <button class="close-nav" onclick="toggleNav(false)">×</button>
+    <img id="userPhoto" src="" alt="profile"
+         onerror="this.style.display='none'">
+    <span id="userName" class="u-name">...</span>
+    <span id="myRoleBadge" class="role-badge"></span>
+  </div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+  <div class="nav-container">
+    <a href="main.html"   class="nav-link">Home</a>
+    <a href="notice.html" class="nav-link">Notice</a>
+    <div class="nav-folder">
+      <div class="nav-folder-header" id="navFolderWeekly">
+        <span class="nav-folder-title">📋 Weekly Records</span>
+        <span class="nav-folder-arrow">▶</span>
       </div>
-
-      <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
-      <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+      <div class="nav-folder-children" id="navFolderWeeklyChildren">
+        <a href="attendance.html" class="nav-sub-link">📅 Attendance</a>
+        <a href="weekly.html"     class="nav-sub-link">💰 Weekly Results</a>
+        <a href="history.html"    class="nav-sub-link">📜 History</a>
+      </div>
     </div>
+    <a href="deckbuilder.html"          class="nav-link">🃏 Deck Builder</a>
+    <a href="yaphalla_infographics.html" class="nav-link">Yaphalla Infographics</a>
+    <a href="yaphalla_guides.html"       class="nav-link">Yaphalla Guides</a>
+    <a href="members.html" class="nav-link">Members</a>
+    <a href="admin.html"   class="nav-link" id="navAdminMenu" style="display:none;">Admin</a>
+  </div>
   <script>
   (function(){
-    var FOLDER_KEY = 'roider_nav_weekly_open';
-    var header   = document.getElementById('navFolderWeekly');
-    var children = document.getElementById('navFolderWeeklyChildren');
-    if (!header || !children) return;
-
-    var path = window.location.pathname;
-    var isInFolder = path.includes('attendance.html') || path.includes('weekly.html') || path.includes('history.html');
-    var hasActive  = children.querySelector('.nav-sub-link.active');
-    var saved      = localStorage.getItem(FOLDER_KEY);
-    var shouldOpen = isInFolder || !!hasActive || saved === '1';
-
-    function setOpen(open) {
-      header.classList.toggle('open', open);
-      children.classList.toggle('open', open);
-      localStorage.setItem(FOLDER_KEY, open ? '1' : '0');
-    }
-    setOpen(shouldOpen);
-
-    header.addEventListener('click', function(e){
-      e.stopPropagation();
-      setOpen(!header.classList.contains('open'));
-    });
+    var K='roider_nav_weekly_open',h=document.getElementById('navFolderWeekly'),
+        c=document.getElementById('navFolderWeeklyChildren');
+    if(!h||!c)return;
+    var isOpen=localStorage.getItem(K)==='1';
+    function setOpen(v){h.classList.toggle('open',v);c.style.maxHeight=v?c.scrollHeight+'px':'0';
+      c.style.overflow='hidden';localStorage.setItem(K,v?'1':'0');}
+    c.style.transition='max-height .3s ease';c.style.overflow='hidden';setOpen(isOpen);
+    h.addEventListener('click',function(){setOpen(!h.classList.contains('open'));});
   })();
   </script>
 </nav>
 
+<!-- 메인 콘텐츠 -->
+<main class="main-content">
   <div class="wrap">
     <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
       <div>
@@ -255,20 +248,22 @@
       if (!user) return location.replace('login.html');
       const snap = await db.collection("users").doc(user.uid).get();
       const data = snap.data();
-      if (data.role === "pending") return location.replace("pending.html");
+      if (!data || data.role === "pending") return location.replace("pending.html");
 
-      document.getElementById("userName").textContent = data.nickname;
-      document.getElementById("userPhoto").src = data.customPhotoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nickname)}&background=2a3242&color=f4c430&bold=true`;
-      
+      document.getElementById("userName").textContent = data.nickname || user.displayName || '?';
+      const photo = data.customPhotoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nickname||'?')}&background=2a3242&color=f4c430&bold=true`;
+      document.getElementById("userPhoto").src = photo;
+      const pbtn = document.getElementById('profileChangeBtn');
+      if (pbtn) pbtn.style.display = '';
+
       if (data.role === "admin" || data.role === "manager") {
         myRole = data.role;
-        document.getElementById("navAdminMenu").style.display = "inline-block";
+        document.getElementById("navAdminMenu").style.display = "block";
         document.getElementById("adminControls").style.display = "block";
         document.getElementById("gridSettings").style.display = "flex";
         const badge = document.getElementById("myRoleBadge");
-        badge.textContent = data.role.toUpperCase();
-        badge.style.display = "inline-block";
-        badge.className = `role-badge role-${data.role.toUpperCase()}`;
+        badge.textContent = data.role === 'admin' ? 'Admin' : 'Manager';
+        badge.className = `role-badge role-${data.role}`;
       }
       loadStrategy();
       if (typeof checkNoticeBadge === 'function') checkNoticeBadge(db, user.uid);
@@ -378,25 +373,20 @@
     }
 
     async function logout() {
-      const ok = await showConfirm('로그아웃 하시겠습니까?', { icon: '🚪', okText: '로그아웃', cancelText: '취소' });
+      const ok = await showConfirm('Logout?', { icon: '🚪', okText: 'Logout', cancelText: 'Cancel' });
       if (ok) auth.signOut().then(() => location.href = 'login.html');
     }
 
-    function handleLangChange() {
-      if (typeof window.openLangDropdown === 'function') {
-        window.openLangDropdown();
-      } else if (typeof window.toggleLanguage === 'function') {
-        window.toggleLanguage();
-      }
+    function toggleNav(open) {
+      const nav     = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      if (open) { nav.classList.add('active'); overlay.classList.add('active'); }
+      else      { nav.classList.remove('active'); overlay.classList.remove('active'); }
     }
   </script>
 
-  <!-- 로딩 오버레이 -->
-  <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
-    <div class="loading-spinner"></div>
-    <span class="loading-text" style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">ROIDER GUILD</span>
-  </div>
-
+</main>
+</div><!-- /.app-container -->
 
 </body>
 </html>

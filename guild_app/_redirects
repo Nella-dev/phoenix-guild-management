@@ -1,0 +1,36 @@
+# Cloudflare Pages - SPA 라우팅 설정
+# 각 HTML 파일을 직접 서빙 (ERR_FAILED 방지)
+
+/notice.html                /notice.html                200
+/main.html                  /main.html                  200
+/admin.html                 /admin.html                 200
+/attendance.html            /attendance.html            200
+/weekly.html                /weekly.html                200
+/history.html               /history.html               200
+/members.html               /members.html               200
+/deckbuilder.html           /deckbuilder.html           200
+/yaphalla_guides.html       /yaphalla_guides.html       200
+/yaphalla_infographics.html /yaphalla_infographics.html 200
+/login.html                 /login.html                 200
+/nickname.html              /nickname.html              200
+/pending.html               /pending.html               200
+/profile_select.html        /profile_select.html        200
+/discord_callback.html      /discord_callback.html      200
+/admin-approve.html         /admin-approve.html         200
+/formation_board.html       /formation_board.html       200
+/editor.html                /editor.html                200
+/strategy.html              /strategy.html              200
+/404.html                   /404.html                   200
+
+# 정적 파일들 직접 서빙
+/firebase_config.js         /firebase_config.js         200
+/firebase_key.js            /firebase_key.js            200
+/firebase-messaging-sw.js   /firebase-messaging-sw.js   200
+/sw.js                      /sw.js                      200
+/push_manager.js            /push_manager.js            200
+/i18n.js                    /i18n.js                    200
+/i18n_added.js              /i18n_added.js              200
+/discord_config.js          /discord_config.js          200
+
+# SPA 폴백 (명시적으로 처리되지 않은 모든 경로는 index.html로)
+/*                          /index.html                 200

@@ -1,4 +1,4 @@
-# ROIDER GUILD — 백그라운드 푸시 알림 설정 가이드
+# Phoenix Guild — 백그라운드 푸시 알림 설정 가이드
 
 > **버전**: v2.0 (2025-03)  
 > **대상**: Firebase Hosting + Cloud Functions 기반 PWA  
@@ -286,4 +286,137 @@ Firebase Cloud Functions (서버)
 
 ---
 
-*ROIDER GUILD APP — Push Notification System v2.0*
+*Phoenix Guild APP — Push Notification System v2.0*
+
+---
+
+## 🎮 Discord 로그인 설정 가이드
+
+### 사전 준비
+
+| 필요 항목 | 설명 |
+|---|---|
+| Discord 계정 | 앱 생성용 |
+| Firebase Blaze 플랜 | Cloud Functions 사용 (이미 설정됨) |
+
+---
+
+### STEP A — Discord Developer Portal 앱 생성
+
+1. https://discord.com/developers/applications 접속
+2. **[New Application]** 클릭 → 이름 입력 (예: `Phoenix Guild`)
+3. **OAuth2** 탭 → **Redirects** 섹션
+4. **[Add Redirect]** 클릭 후 아래 URL 추가:
+   ```
+   https://roider-guild-management.web.app/discord_callback.html
+   ```
+5. **CLIENT ID** 와 **CLIENT SECRET** 복사해 두기
+
+---
+
+### STEP B — discord_config.js 수정
+
+`guild_app/discord_config.js` 파일을 편집:
+
+```js
+window.DISCORD_CLIENT_ID  = '여기에_CLIENT_ID';        // Discord 앱 Client ID
+window.DISCORD_REDIRECT_URI = 'https://roider-guild-management.web.app/discord_callback.html';
+window.DISCORD_GUILD_ID   = '여기에_서버_ID';           // 서버 닉네임 자동 조회 (선택)
+```
+
+> **DISCORD_GUILD_ID 확인 방법**: Discord 서버 우클릭 → 서버 ID 복사  
+> (개발자 모드 활성화 필요: 설정 → 고급 → 개발자 모드 ON)
+
+---
+
+### STEP C — Cloud Functions 환경변수 설정
+
+```bash
+cd guild_app
+
+# 필수
+firebase functions:secrets:set DISCORD_CLIENT_ID
+# 입력 프롬프트: Discord 앱 Client ID 붙여넣기
+
+firebase functions:secrets:set DISCORD_CLIENT_SECRET
+# 입력 프롬프트: Discord 앱 Client Secret 붙여넣기
+
+firebase functions:secrets:set DISCORD_REDIRECT_URI
+# 입력 프롬프트: https://roider-guild-management.web.app/discord_callback.html
+
+# 선택 (서버 닉네임 자동 조회)
+firebase functions:secrets:set DISCORD_GUILD_ID
+# 입력 프롬프트: Discord 서버 ID
+```
+
+또는 `.env.local` 파일 방식 (로컬 에뮬레이터용):
+```
+DISCORD_CLIENT_ID=123456789
+DISCORD_CLIENT_SECRET=abc...
+DISCORD_REDIRECT_URI=http://localhost:5000/discord_callback.html
+DISCORD_GUILD_ID=987654321
+```
+
+---
+
+### STEP D — OAuth2 스코프 확인
+
+Discord Developer Portal → **OAuth2** 탭에서 다음 스코프가 필요합니다:
+- `identify` — 유저 ID, username 조회 (필수)
+- `guilds.members.read` — 서버 내 닉네임 조회 (서버닉 자동완성 사용 시)
+
+> `guilds.members.read`는 Bot 탭에서 봇을 생성하고 서버에 초대한 경우에만 정상 동작합니다.  
+> 봇 없이 `identify`만으로도 Discord 글로벌 이름은 자동완성됩니다.
+
+---
+
+### STEP E — 배포
+
+```bash
+cd guild_app
+
+# Functions만 배포 (환경변수 적용)
+firebase deploy --only functions
+
+# Hosting 배포 (discord_config.js, discord_callback.html 포함)
+firebase deploy --only hosting
+
+# 전체 배포
+firebase deploy
+```
+
+---
+
+### 🔄 로그인 흐름 요약
+
+```
+사용자 클릭 [Discord로 로그인]
+  │
+  ├─ 팝업 열기 → discord.com 인증 화면
+  │     └─ 사용자 Discord 로그인 + 권한 허용
+  │
+  ├─ discord_callback.html → code 수신
+  │     └─ postMessage로 부모창(login.html)에 전달
+  │
+  ├─ Cloud Function discordExchangeToken 호출
+  │     ├─ code → Discord access_token 교환
+  │     ├─ Discord /users/@me → 유저 정보 조회
+  │     ├─ Discord /users/@me/guilds/{id}/member → 서버닉 조회 (옵션)
+  │     ├─ Firebase Custom Token 발급 (uid = "discord:{discordId}")
+  │     └─ Firestore discordLinks 컬렉션에 연동 정보 저장
+  │
+  └─ signInWithCustomToken() → Firebase 로그인 완료
+        └─ nickname.html: 서버닉 자동완성 배너 표시
+```
+
+---
+
+### 🐛 문제 해결
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| `Discord 앱 설정이 필요합니다` 토스트 | `discord_config.js` 미수정 | CLIENT_ID 입력 |
+| `redirect_uri_mismatch` Discord 오류 | Redirect URI 불일치 | Developer Portal에 정확한 URI 추가 |
+| `failed-precondition` CF 오류 | 환경변수 미설정 | `firebase functions:secrets:set` 실행 |
+| 서버 닉네임이 안 나옴 | `guilds.members.read` 스코프 / 봇 미설치 | DISCORD_GUILD_ID 확인 및 봇 서버 초대 |
+| 팝업 차단 | 브라우저 설정 | 팝업 허용 또는 redirect 폴백 자동 동작 |

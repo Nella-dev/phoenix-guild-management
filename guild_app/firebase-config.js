@@ -1,4 +1,4 @@
-// firebase-config.js — ROIDER Firebase compat 초기화 (compat SDK 전용)
+// firebase-config.js — Phoenix Firebase compat 초기화 (compat SDK 전용)
 // firebase_key.js 와 firebase_config.js 를 로드한 뒤 이 파일이 필요 없는 페이지는 무시 가능
 
 (function(){

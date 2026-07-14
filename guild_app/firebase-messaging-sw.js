@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   firebase-messaging-sw.js  —  ROIDER GUILD  FCM Service Worker  v2.0
+   firebase-messaging-sw.js  —  Phoenix Guild  FCM Service Worker  v2.0
    ═══════════════════════════════════════════════════════════════════════════
 
    이 파일은 반드시 웹 루트(/)에 위치해야 합니다.
@@ -36,8 +36,8 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
 // ── 버전 / 상수 ──────────────────────────────────────────────────────────────
-const SW_VERSION  = '2.1.0';
-const CACHE_NAME  = 'roider-fcm-v3';          // SW 전용 캐시 (오프라인 fallback용)
+const SW_VERSION  = '2.2.0';
+const CACHE_NAME  = 'roider-fcm-v4';          // SW 전용 캐시 (오프라인 fallback용 — HTML 제외)
 
 // 아이콘 경로 (로컬 assets/ — 오프라인 환경에서도 표시)
 const ICON_PATH   = '/assets/icon-192.png';
@@ -45,9 +45,8 @@ const BADGE_PATH  = '/assets/badge-72.png';
 const NOTICE_URL  = '/notice.html';
 const NOTICE_TAG  = 'roider-notice';
 
-// 오프라인 fallback 캐시 대상
+// 오프라인 fallback 캐시 대상 (HTML 페이지는 제외 — navigate 요청은 SW가 인터셉트하지 않음)
 const OFFLINE_CACHE = [
-  NOTICE_URL,
   ICON_PATH,
   BADGE_PATH,
   '/assets/icon-512.png',
@@ -74,7 +73,7 @@ console.log(`[FCM SW] v${SW_VERSION} 초기화 완료`);
       - 백그라운드 / 종료 시: showNotification + 열린 탭에도 postMessage
    ═══════════════════════════════════════════════════════════════════════════ */
 async function _handlePush(title, body, data) {
-  const notifTitle   = title || '📢 ROIDER GUILD 공지';
+  const notifTitle   = title || '📢 Phoenix Guild 공지';
   const notifBody    = body  || '새 공지사항이 등록되었습니다.';
   const targetUrl    = (data && data.url) ? data.url : NOTICE_URL;
   const noticeId     = (data && data.noticeId) ? data.noticeId : '';
@@ -159,7 +158,7 @@ self.addEventListener('push', (event) => {
   // payload 없으면 기본 알림
   if (!event.data) {
     event.waitUntil(
-      _handlePush('📢 ROIDER GUILD', '새 공지사항이 있습니다.', { url: NOTICE_URL })
+      _handlePush('📢 Phoenix Guild', '새 공지사항이 있습니다.', { url: NOTICE_URL })
     );
     return;
   }
@@ -182,7 +181,7 @@ self.addEventListener('push', (event) => {
     }
     // data-only FCM 형식
     else if (parsed.data) {
-      title = parsed.data.title || '📢 ROIDER GUILD 공지';
+      title = parsed.data.title || '📢 Phoenix Guild 공지';
       body  = parsed.data.body  || parsed.data.content || '새 공지사항이 등록되었습니다.';
       data  = {
         url:      parsed.data.url      || NOTICE_URL,
@@ -192,13 +191,13 @@ self.addEventListener('push', (event) => {
     }
     // 기타 형식
     else {
-      title = parsed.title || '📢 ROIDER GUILD';
+      title = parsed.title || '📢 Phoenix Guild';
       body  = parsed.body  || '새 공지사항이 있습니다.';
       data  = { url: parsed.url || NOTICE_URL };
     }
   } catch (_) {
     // JSON 파싱 실패 → 텍스트로 처리
-    title = '📢 ROIDER GUILD 공지';
+    title = '📢 Phoenix Guild 공지';
     body  = event.data.text() || '새 공지사항이 등록되었습니다.';
     data  = { url: NOTICE_URL };
   }
@@ -301,7 +300,7 @@ self.addEventListener('install', (event) => {
   console.log(`[FCM SW] install — v${SW_VERSION}`);
   self.skipWaiting();
 
-  // 오프라인에서도 notice.html + 아이콘이 열리도록 캐시
+  // 알림 아이콘/배지만 캐시 (HTML 파일은 캐시하지 않음 — 네트워크 직접 요청)
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       cache.addAll(OFFLINE_CACHE).catch((err) => {
@@ -343,9 +342,13 @@ self.addEventListener('activate', (event) => {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ⑨ fetch 이벤트 — 오프라인 fallback (notice.html / 아이콘)
-      캐시 히트 → 즉시 반환
-      캐시 미스 → 네트워크 → 실패 시 캐시된 notice.html fallback
+   ⑨ fetch 이벤트 — 오프라인 fallback (아이콘 / 배지 이미지만)
+
+   ★ 핵심 정책:
+     - navigate 요청(HTML 페이지 탐색): SW가 절대 인터셉트하지 않음
+       → 브라우저가 네트워크에서 직접 서빙 (ERR_FAILED 원인 제거)
+     - 아이콘/배지 이미지: Cache-first (오프라인에서도 FCM 알림 표시)
+     - 그 외 요청: SW가 처리하지 않음
    ═══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('fetch', (event) => {
   const reqUrl = event.request.url;
@@ -353,32 +356,36 @@ self.addEventListener('fetch', (event) => {
   // ── http(s) 이외의 스킴(chrome-extension 등)은 캐싱 불가 → 즉시 반환
   if (!reqUrl.startsWith('http://') && !reqUrl.startsWith('https://')) return;
 
+  // ── ★ HTML 페이지 탐색(navigate)은 SW가 인터셉트하지 않음 ──────────────
+  //    일반 클릭 / F5 새로고침 시 ERR_FAILED 방지
+  //    Ctrl+Shift+R(강제 새로고침)과 동일하게 네트워크 직접 요청
+  if (event.request.mode === 'navigate') return;
+
   const url = new URL(reqUrl);
 
-  // 오프라인 캐시 대상 경로만 처리
+  // 오프라인 캐시 대상(아이콘/배지 이미지)만 처리
   const isCached = OFFLINE_CACHE.some(
     (path) => url.pathname === path || url.pathname.endsWith(path)
   );
-  if (!isCached) return;  // 나머지는 sw.js(메인 SW)가 처리
+  if (!isCached) return;  // 이미지 외 나머지는 처리하지 않음
 
+  // Cache-first: 캐시 히트 → 즉시 반환 / 미스 → 네트워크 후 캐시 갱신
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
 
       return fetch(event.request)
         .then((response) => {
-          // 유효한 응답은 캐시 갱신
+          // 유효한 응답은 캐시에 저장
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
-        .catch(() => {
-          // 네트워크 실패 + 캐시 없음 → notice.html fallback
-          if (url.pathname.endsWith('.html')) {
-            return caches.match(NOTICE_URL);
-          }
+        .catch((err) => {
+          console.warn('[FCM SW] 아이콘 fetch 실패:', url.pathname, err.message);
+          // 아이콘 실패는 undefined 반환 (SW가 응답 없이 브라우저에 위임)
         });
     })
   );

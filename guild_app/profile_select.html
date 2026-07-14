@@ -2,8 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ROIDER - 프로필 선택</title>
+  <title>Phoenix - 프로필 선택</title>
 
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://static.wikia.nocookie.net">
@@ -377,7 +379,7 @@
 <body>
 
   <header>
-    <div class="logo">ROIDER GUILD</div>
+    <div class="logo">Phoenix Guild</div>
     <div class="user-box">
       <img id="headerPhoto" src="" alt="profile" />
       <span id="headerName">Loading...</span>
@@ -390,7 +392,8 @@
 
       <!-- 탭 -->
       <div class="panel-tabs">
-        <div class="panel-tab active" onclick="switchTab('profile')">프로필</div>
+        <div class="panel-tab active" id="tabProfile" onclick="switchTab('profile')">🎨 프로필</div>
+        <div class="panel-tab" id="tabYaphalla" onclick="switchTab('yaphalla')">🃏 덱 에디터</div>
       </div>
 
       <!-- 미리보기 -->
@@ -400,7 +403,33 @@
         </div>
       </div>
 
+      <!-- Yaphalla 에디터 탭 콘텐츠 -->
+      <div id="yaphallaPanel" style="display:none; padding:0;">
+        <div style="padding:12px 16px 8px; font-size:11px; color:#888; line-height:1.5; border-bottom:1px solid #2a3242;">
+          💡 Yaphalla 에디터에서 캐릭터/덱을 설정한 뒤 스크린샷을 찍어<br>프로필 탭에서 파일로 업로드하거나, 에디터를 직접 활용하세요.
+        </div>
+        <div style="position:relative; width:100%; height:420px;">
+          <div id="yaphallaLoading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#0f1015;z-index:5;">
+            <div class="spin"></div>
+            <span style="font-size:12px;color:#888;">Yaphalla 에디터 로딩 중...</span>
+          </div>
+          <div id="yaphallaBlocked" style="display:none;position:absolute;inset:0;background:#0f1015;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;z-index:4;">
+            <div style="font-size:40px;">🔗</div>
+            <div style="color:#f4c430;font-size:15px;font-weight:700;">외부 에디터 열기</div>
+            <div style="color:#aaa;font-size:12px;line-height:1.6;">Yaphalla 에디터는 보안 정책으로<br>임베드가 제한될 수 있습니다.</div>
+            <button onclick="window.open('https://www.yaphalla.com/editor','_blank')" style="background:#f4c430;color:#000;border:none;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;">🚀 Yaphalla 에디터 열기</button>
+          </div>
+          <iframe id="yaphallaIframe"
+            src="about:blank"
+            style="width:100%;height:100%;border:none;"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            title="Yaphalla Editor"
+          ></iframe>
+        </div>
+      </div>
+
       <!-- 그리드 -->
+      <div id="profilePanel">
       <div class="grid-container">
         <div class="grid-section-label">사용할 프로필을 선택하세요</div>
         <div class="grid-scroll">
@@ -426,8 +455,11 @@
         </div>
       </div>
 
+      </div>
+      </div><!-- #profilePanel end -->
+
       <!-- 뒤로 + 저장 -->
-      <div class="save-section">
+      <div class="save-section" id="saveSection">
         <div class="back-btn" onclick="goBack()">
           <div class="back-arrow">←</div>
           <span>뒤로가기</span>
@@ -450,7 +482,7 @@
   <!-- 로딩 오버레이 -->
   <div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(15,16,21,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
     <div style="width:36px;height:36px;border:3px solid #333;border-top-color:#f4c430;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-    <span style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">ROIDER GUILD</span>
+    <span style="margin-top:16px;color:#f4c430;font-size:14px;letter-spacing:1px;">Phoenix Guild</span>
   </div>
 
   <script>
@@ -826,7 +858,61 @@
     else location.replace('main.html');
   }
 
-  function switchTab(tab) { /* 향후 확장용 */ }
+  // ════════════════════════════════════════════════════
+  // 탭 전환
+  // ════════════════════════════════════════════════════
+  let _yaphallaLoaded = false;
+
+  function switchTab(tab) {
+    const profilePanel  = document.getElementById('profilePanel');
+    const yaphallaPanel = document.getElementById('yaphallaPanel');
+    const saveSection   = document.getElementById('saveSection');
+    const tabProfile    = document.getElementById('tabProfile');
+    const tabYaphalla   = document.getElementById('tabYaphalla');
+
+    if (tab === 'profile') {
+      profilePanel.style.display  = '';
+      yaphallaPanel.style.display = 'none';
+      saveSection.style.display   = '';
+      tabProfile.classList.add('active');
+      tabYaphalla.classList.remove('active');
+    } else if (tab === 'yaphalla') {
+      profilePanel.style.display  = 'none';
+      yaphallaPanel.style.display = '';
+      saveSection.style.display   = 'none';
+      tabProfile.classList.remove('active');
+      tabYaphalla.classList.add('active');
+      // 처음 열 때 iframe 로드
+      if (!_yaphallaLoaded) {
+        _yaphallaLoaded = true;
+        const iframe = document.getElementById('yaphallaIframe');
+        const loading = document.getElementById('yaphallaLoading');
+        const blocked = document.getElementById('yaphallaBlocked');
+        let loadTimer = setTimeout(() => {
+          try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc || doc.URL === 'about:blank') { showYaphallaBlocked(); }
+            else { loading.style.display = 'none'; }
+          } catch(e) { loading.style.display = 'none'; } // cross-origin = success
+        }, 7000);
+        iframe.addEventListener('load', function() {
+          clearTimeout(loadTimer);
+          try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc || doc.URL === 'about:blank') { showYaphallaBlocked(); return; }
+          } catch(e) {}
+          loading.style.display = 'none';
+        });
+        iframe.addEventListener('error', showYaphallaBlocked);
+        iframe.src = 'https://www.yaphalla.com/editor';
+
+        function showYaphallaBlocked() {
+          loading.style.display = 'none';
+          blocked.style.display = 'flex';
+        }
+      }
+    }
+  }
   </script>
 
 </body>

@@ -1,4 +1,4 @@
-# 🌍 ROIDER GUILD — GeoIP 일괄 업데이트 도구
+# 🌍 Phoenix Guild — GeoIP 일괄 업데이트 도구
 
 ## 📁 파일 구성
 

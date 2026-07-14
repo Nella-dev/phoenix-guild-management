@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  🌍  ROIDER GUILD — GeoIP 스케줄러 Cloud Function  (functions/index.js 추가분)
+ *  🌍  Phoenix Guild — GeoIP 스케줄러 Cloud Function  (functions/index.js 추가분)
  *
  *  이 코드를 functions/index.js 파일 하단에 추가하세요.
  *
@@ -62,7 +62,7 @@ function nodeFetchJson(url, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https_module : http_module;
     const req = mod.get(url, {
-      headers: { 'User-Agent': 'ROIDER-Guild-CF-GeoIP/2.0' },
+      headers: { 'User-Agent': 'Phoenix-Guild-CF-GeoIP/2.0' },
       timeout: timeoutMs,
     }, (res) => {
       let data = '';

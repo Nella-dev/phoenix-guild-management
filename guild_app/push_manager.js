@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   push_manager.js  —  ROIDER GUILD  푸시 알림 매니저  v2.1
+   push_manager.js  —  Phoenix Guild  푸시 알림 매니저  v2.1
    ═══════════════════════════════════════════════════════════════════════════
 
    v2.1 변경사항:
@@ -397,7 +397,7 @@
       return;
     }
     if (_swReg) {
-      _swReg.showNotification('📢 ROIDER GUILD 테스트', {
+      _swReg.showNotification('📢 Phoenix Guild 테스트', {
         body:    '푸시 알림이 정상적으로 동작합니다! ✅',
         icon:    ICON_PATH,
         badge:   '/assets/badge-72.png',
@@ -410,7 +410,7 @@
       });
     } else {
       try {
-        new Notification('📢 ROIDER GUILD 테스트', {
+        new Notification('📢 Phoenix Guild 테스트', {
           body: '푸시 알림이 정상적으로 동작합니다! ✅',
           icon: ICON_PATH,
           tag:  'roider-test',
@@ -588,7 +588,7 @@
     if (!shouldShowOS) return;
 
     if (_swReg) {
-      _swReg.showNotification(title || '📢 ROIDER GUILD', {
+      _swReg.showNotification(title || '📢 Phoenix Guild', {
         body:               body || '',
         icon:               ICON_PATH,
         badge:              '/assets/badge-72.png',
@@ -599,12 +599,12 @@
       }).catch((err) => {
         console.warn('[PushManager] SW showNotification 실패:', err.message);
         // SW 실패 시 직접 Notification으로 fallback
-        try { new Notification(title || '📢 ROIDER GUILD', { body: body || '', icon: ICON_PATH }); }
+        try { new Notification(title || '📢 Phoenix Guild', { body: body || '', icon: ICON_PATH }); }
         catch (e) { /* 무시 */ }
       });
     } else {
       try {
-        new Notification(title || '📢 ROIDER GUILD', {
+        new Notification(title || '📢 Phoenix Guild', {
           body: body || '',
           icon: ICON_PATH,
           tag:  'roider-notice-fg',
@@ -632,7 +632,7 @@
     notif.innerHTML = `
       <div class="ian-icon">📢</div>
       <div class="ian-body">
-        <div class="ian-title">${_escHtml(title || 'ROIDER GUILD')}</div>
+        <div class="ian-title">${_escHtml(title || 'Phoenix Guild')}</div>
         <div class="ian-text">${_escHtml(body || '')}</div>
       </div>
       <button class="ian-close" aria-label="알림 닫기" title="닫기">×</button>

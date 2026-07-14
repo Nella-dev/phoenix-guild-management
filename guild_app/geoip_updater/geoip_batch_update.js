@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  🌍  ROIDER GUILD — GeoIP 일괄 업데이트 스크립트  v3.0
+ *  🌍  Phoenix Guild — GeoIP 일괄 업데이트 스크립트  v3.0
  *  geoip_batch_update.js
  * ═══════════════════════════════════════════════════════════════════════════
  *
@@ -225,7 +225,7 @@ async function detectGeoIP(ip = null) {
         const res = await fetch(url, {
           signal : controller.signal,
           headers: {
-            'User-Agent': 'ROIDER-Guild-GeoIP-Updater/3.0',
+            'User-Agent': 'Phoenix-Guild-GeoIP-Updater/3.0',
             'Accept'    : 'application/json',
           },
         });
@@ -312,7 +312,7 @@ function initFirebase() {
 async function main() {
   console.log('');
   console.log(C.bold + C.white + '═══════════════════════════════════════════════════════════' + C.reset);
-  console.log(C.bold + C.white + '   🌍  ROIDER GUILD — GeoIP 일괄 업데이트  v3.0           ' + C.reset);
+  console.log(C.bold + C.white + '   🌍  Phoenix Guild — GeoIP 일괄 업데이트  v3.0           ' + C.reset);
   console.log(C.bold + C.white + '═══════════════════════════════════════════════════════════' + C.reset);
   console.log('');
 

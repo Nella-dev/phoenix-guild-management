@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <meta charset="UTF-8"/>
+  <meta name="description" content="Yaphalla Guides - Discord #yaphalla-guides channel live feed">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Phoenix Guild - Yaphalla Guides</title>
+  <link rel="stylesheet" href="header_standard.css">
+  <link rel="stylesheet" href="common_style.css">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_key.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="ui_utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="profile_modal.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+  <script src="push_manager.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="i18n_added.js" defer></script>
+<style>
+/* ── 사이드바 - PC 상시 노출 ─────────────────────── */
+nav.side-nav {
+  width: 250px;
+  background: #161b22;
+  border-right: 1px solid #2a3242;
+  height: calc(100vh - 60px);
+  position: sticky;
+  top: 60px;
+  z-index: 1000;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+/* ── 사이드바 모바일 ─────────────────────────────── */
+@media (max-width: 850px) {
+  .menu-trigger { display: block !important; }
+  nav.side-nav {
+    position: fixed; top: 0; left: -280px; width: 280px;
+    height: 100%; z-index: 2100;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+    border-right: 1px solid #2a3242;
+    transition: left 0.3s ease;
+    background: #161b22;
+  }
+  nav.side-nav.active { left: 0; }
+  .app-container { display: block; }
+  .nav-container { flex-direction: column; padding: 10px 0; justify-content: flex-start; height: auto; gap: 0; }
+  .nav-link { font-size: 16px !important; padding: 15px 25px !important; width: 100%; box-sizing: border-box; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .overlay.active { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2050; }
+}
+
+/* ── 사이드바 유저 정보 ──────────────────────────── */
+.sidebar-user-info {
+  padding: 40px 20px 25px;
+  background: rgba(244, 196, 48, 0.03);
+  border-bottom: 1px solid #2a3242;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+.sidebar-user-info img {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  object-fit: cover;
+  box-sizing: border-box;
+}
+.user-name-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+.u-name { font-size: 17px; font-weight: bold; color: #fff; }
+
+/* → common_style.css */
+
+/* → common_style.css */
+
+/* ── 네비게이션 링크 ─────────────────────────────── */
+.nav-container { display: flex; flex-direction: column; }
+.nav-link {
+  font-size: 15px; padding: 14px 25px; color: #ccc;
+  text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: 0.2s; position: relative;
+}
+.nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.nav-link.active { color: #f4c430; background: rgba(244,196,48,0.1); font-weight: bold; }
+@media (max-width: 850px) {
+  .nav-link.active { border-left: 3px solid #f4c430; padding-left: 22px !important; }
+}
+
+/* → common_style.css */
+
+/* ── 페이지 타이틀 ───────────────────────────────── */
+.page-hdr{margin-bottom:clamp(18px,3vw,28px);}
+.page-hdr h2{color:#f4c430;font-size:clamp(17px,3.8vw,23px);margin:0 0 5px;
+  font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.page-hdr p{color:#666;font-size:clamp(11px,2vw,13px);margin:0;}
+
+/* ── LIVE 뱃지 ───────────────────────────────────── */
+.live-badge{display:inline-flex;align-items:center;gap:4px;
+  background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);
+  border-radius:20px;padding:2px 9px;font-size:clamp(9px,1.6vw,11px);color:#00e676;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#00e676;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── 피드 리스트 (최신글 맨 위, 세로 피드) ───────── */
+.feed-list{display:flex;flex-direction:column;gap:clamp(14px,3vw,20px);}
+
+/* ── 피드 카드 ───────────────────────────────────── */
+.feed-card{
+  background:#13171f;
+  border:1px solid #1e2535;
+  border-radius:clamp(10px,2vw,16px);
+  overflow:hidden;
+  transition:border-color .25s, box-shadow .25s;
+}
+.feed-card:hover{
+  border-color:#2e3a52;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+
+/* 카드 헤더 — 작성자 정보 */
+.card-header{
+  display:flex;align-items:center;gap:10px;
+  padding:clamp(12px,2.5vw,16px) clamp(12px,2.5vw,18px) 0;
+}
+.card-avatar{
+  width:clamp(32px,5vw,40px);height:clamp(32px,5vw,40px);
+  border-radius:50%;overflow:hidden;flex-shrink:0;
+  background:linear-gradient(135deg,#5865f2,#eb459e);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(13px,2.2vw,16px);font-weight:bold;color:#fff;
+}
+.card-avatar img{width:100%;height:100%;object-fit:cover;}
+.card-author-info{flex:1;min-width:0;}
+.card-author{font-size:clamp(12px,2.2vw,14px);font-weight:600;color:#c0c8d8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-date{font-size:clamp(10px,1.7vw,12px);color:#444;margin-top:2px;}
+.card-channel{font-size:clamp(9px,1.5vw,11px);background:rgba(88,101,242,.12);
+  color:#7083c0;border:1px solid rgba(88,101,242,.2);border-radius:10px;
+  padding:2px 8px;white-space:nowrap;flex-shrink:0;}
+
+/* 카드 본문 */
+.card-body-text{
+  padding:clamp(10px,2vw,14px) clamp(12px,2.5vw,18px);
+  font-size:clamp(12px,2.2vw,14px);color:#b8c5d0;
+  line-height:1.75;word-break:break-word;
+}
+.card-body-text a{color:#7db3ff;text-decoration:none;word-break:break-all;}
+.card-body-text a:hover{text-decoration:underline;}
+.card-body-text b{color:#e6e6e6;}
+
+/* 이미지 그리드 */
+.card-images{padding:0 clamp(12px,2.5vw,18px) clamp(12px,2.5vw,16px);}
+.img-grid-1 img{width:100%;border-radius:10px;display:block;cursor:pointer;
+  max-height:480px;object-fit:contain;background:#0d1018;}
+.img-grid-2,.img-grid-3,.img-grid-4{display:grid;gap:4px;}
+.img-grid-2{grid-template-columns:1fr 1fr;}
+.img-grid-3{grid-template-columns:1fr 1fr 1fr;}
+.img-grid-4{grid-template-columns:1fr 1fr;}
+.img-grid-2 img,.img-grid-3 img,.img-grid-4 img{
+  width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;cursor:pointer;
+  display:block;transition:opacity .2s;}
+.img-grid-2 img:hover,.img-grid-3 img:hover,.img-grid-4 img:hover{opacity:.85;}
+/* 4개 이상일 때 마지막에 +N 오버레이 */
+.img-more-wrap{position:relative;display:block;}
+.img-more-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(16px,3vw,22px);font-weight:bold;color:#fff;pointer-events:none;}
+
+/* ── 이미지 라이트박스 ───────────────────────────── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+  z-index:9000;align-items:center;justify-content:center;}
+.lightbox.active{display:flex;}
+.lb-img{max-width:94vw;max-height:92vh;object-fit:contain;border-radius:8px;display:block;}
+.lb-close{position:absolute;top:14px;right:18px;background:rgba(255,255,255,.12);
+  border:none;color:#fff;font-size:22px;width:40px;height:40px;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.lb-close:hover{background:rgba(255,255,255,.25);}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.1);border:none;color:#fff;width:44px;height:44px;
+  border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;}
+.lb-nav:hover{background:rgba(255,255,255,.25);}
+.lb-prev{left:14px;} .lb-next{right:14px;}
+.lb-counter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:#fff;font-size:13px;padding:4px 14px;border-radius:20px;}
+
+/* ── 페이지 로딩 오버레이 ─────────────────────────── */
+.loading-overlay{position:fixed;inset:0;background:rgba(15,16,21,.95);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;gap:16px;}
+.loading-overlay .loading-spinner{width:44px;height:44px;
+  border:3px solid rgba(244,196,48,.2);border-top-color:#f4c430;
+  border-radius:50%;animation:ld-spin .9s linear infinite;}
+@keyframes ld-spin{to{transform:rotate(360deg)}}
+
+/* ── 스켈레톤 ───────────────────────────────────── */
+.sk-card{background:#13171f;border:1px solid #1e2535;border-radius:clamp(10px,2vw,16px);
+  overflow:hidden;padding:clamp(12px,2.5vw,16px);}
+.sk{background:#1c2230;border-radius:6px;animation:shimmer 1.6s infinite;}
+.sk-av{width:38px;height:38px;border-radius:50%;flex-shrink:0;}
+.sk-line{height:12px;margin-bottom:8px;}
+@keyframes shimmer{0%{opacity:.35}50%{opacity:.6}100%{opacity:.35}}
+
+/* 빈 상태 */
+.empty-state{text-align:center;padding:70px 20px;color:#444;}
+.empty-icon{font-size:52px;margin-bottom:14px;}
+.empty-state p{font-size:clamp(12px,2.2vw,14px);line-height:1.7;}
+
+/* 로드 더보기 */
+.load-more-wrap{text-align:center;margin-top:clamp(16px,3vw,24px);}
+.load-more-btn{padding:clamp(10px,2vw,13px) clamp(24px,4vw,36px);
+  background:rgba(255,255,255,.06);color:#aaa;border:1px solid #2a3242;
+  border-radius:8px;font-size:clamp(13px,2.3vw,14px);cursor:pointer;transition:all .2s;}
+.load-more-btn:hover{background:rgba(255,255,255,.12);color:#fff;}
+.load-more-btn:disabled{opacity:.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"></div></div>
+
+<!-- 헤더 -->
+<header>
+  <div class="header-left">
+    <button class="menu-trigger" onclick="toggleNav(true)" aria-label="Menu">☰</button>
+  </div>
+  <img src="assets/Phoenix_header.jpg" alt="Phoenix Guild" class="header-banner-center" onclick="location.href='main.html'">
+  <div class="user-box">
+    <button class="logout-btn" id="langBtn" onclick="handleLangChange()" style="background:rgba(255,255,255,0.05);border:1px solid #444;color:#ccc;padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;">🌐 EN</button>
+  </div>
+</header>
+
+<!-- 모바일 오버레이 -->
+<div class="overlay" id="overlay" onclick="toggleNav(false)"></div>
+
+<!-- 사이드바 -->
+<div class="app-container">
+<nav id="sideNav" class="side-nav">
+  <div class="sidebar-user-info">
+    <button class="close-nav" onclick="toggleNav(false)">×</button>
+    <img id="userPhoto" src="" alt="profile" onerror="this.style.display='none'">
+    <button class="profile-change-btn" id="profileChangeBtn" onclick="openProfileModal()" data-i18n="btn_profile_change">✎ 프로필 변경</button>
+    <div class="user-name-box">
+      <span id="userName" class="u-name">...</span>
+      <span id="myRoleBadge" class="role-badge"></span>
+    </div>
+    <button class="logout-btn" data-i18n="menu_logout" onclick="logout()" style="width:100%;padding:10px;font-size:13px;border:1px solid #444;background:rgba(255,255,255,0.05);color:#ccc;border-radius:8px;cursor:pointer;">로그아웃</button>
+  </div>
+  <div class="nav-container">
+    <a href="main.html" class="nav-link" data-i18n="menu_home">홈</a>
+    <a href="notice.html" class="nav-link" data-i18n="menu_notice">공지사항</a>
+
+    <!-- 주간 컨텐츠 기록부 폴더 -->
+    <div class="nav-folder">
+      <div class="nav-folder-header" id="navFolderWeekly">
+        <span class="nav-folder-title" data-i18n="weekly_folder">📋 주간 컨텐츠 기록부</span>
+        <span class="nav-folder-arrow">▶</span>
+      </div>
+      <div class="nav-folder-children" id="navFolderWeeklyChildren">
+        <a href="attendance.html" class="nav-sub-link" data-i18n="menu_calendar">📅 주간 출석부</a>
+        <a href="weekly.html" class="nav-sub-link" data-i18n="menu_weekly">💰 주간 결산</a>
+        <a href="history.html" class="nav-sub-link" data-i18n="menu_history">📜 결산 내역</a>
+      </div>
+    </div>
+
+    <a href="deckbuilder.html" class="nav-link" data-i18n="menu_deckbuilder">🃏 덱 빌딩 제작소</a>
+    <a href="yaphalla_guides.html" class="nav-link active" data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</a>
+    <a href="members.html" class="nav-link" data-i18n="menu_members">길드원 목록</a>
+    <a href="admin.html" class="nav-link" id="navAdminMenu" style="display:none;" data-i18n="menu_admin">권한 관리</a>
+  </div>
+  <script>
+  (function(){
+    var FOLDER_KEY = 'roider_nav_weekly_open';
+    var header   = document.getElementById('navFolderWeekly');
+    var children = document.getElementById('navFolderWeeklyChildren');
+    if (!header || !children) return;
+    var path = window.location.pathname;
+    var isInFolder = path.includes('attendance.html') || path.includes('weekly.html') || path.includes('history.html');
+    var saved = localStorage.getItem(FOLDER_KEY);
+    var shouldOpen = isInFolder || saved === '1';
+    function setOpen(open) {
+      header.classList.toggle('open', open);
+      children.classList.toggle('open', open);
+      localStorage.setItem(FOLDER_KEY, open ? '1' : '0');
+    }
+    setOpen(shouldOpen);
+    header.addEventListener('click', function(e){
+      e.stopPropagation();
+      setOpen(!header.classList.contains('open'));
+    });
+  })();
+  </script>
+</nav>
+
+<!-- 메인 콘텐츠 -->
+<main class="main-content">
+  <div class="page-hdr">
+    <h2>
+      <span data-i18n="menu_yaphalla_guides">📖 얍할라 가이드</span>
+      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    </h2>
+    <p data-i18n="yaphalla_guides_subtitle">Discord #yaphalla-guides 채널 글이 실시간으로 반영됩니다</p>
+  </div>
+
+  <!-- 스켈레톤 로딩 -->
+  <div id="skeletonArea" class="feed-list">
+    <div class="sk-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="sk sk-av"></div>
+        <div style="flex:1;"><div class="sk sk-line" style="width:30%;margin-bottom:6px;"></div><div class="sk sk-line" style="width:20%;height:10px;"></div></div>
+      </div>
+      <div class="sk sk-line" style="width:90%;"></div>
+      <div class="sk sk-line" style="width:75%;"></div>
+      <div class="sk sk-line" style="width:50%;"></div>
+    </div>
+    <div class="sk-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="sk sk-av"></div>
+        <div style="flex:1;"><div class="sk sk-line" style="width:35%;margin-bottom:6px;"></div><div class="sk sk-line" style="width:22%;height:10px;"></div></div>
+      </div>
+      <div class="sk sk-line" style="width:85%;"></div>
+      <div class="sk sk-line" style="width:70%;"></div>
+    </div>
+    <div class="sk-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="sk sk-av"></div>
+        <div style="flex:1;"><div class="sk sk-line" style="width:28%;margin-bottom:6px;"></div><div class="sk sk-line" style="width:18%;height:10px;"></div></div>
+      </div>
+      <div class="sk sk-line" style="width:95%;"></div>
+      <div class="sk sk-line" style="width:60%;"></div>
+    </div>
+  </div>
+
+  <!-- 피드 -->
+  <div class="feed-list" id="feedList" style="display:none;"></div>
+
+  <!-- 더보기 버튼 -->
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()" data-i18n="guides_load_more">더 보기</button>
+  </div>
+
+  <!-- 빈 상태 -->
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="empty-icon">📖</div>
+    <p>No guides yet.<br>
+       <span style="color:#333;font-size:12px;">Posts from Discord #yaphalla-guides<br>will automatically appear here.</span></p>
+  </div>
+</main>
+</div>
+
+<!-- ── 이미지 라이트박스 ─────────────────────────── -->
+<div class="lightbox" id="lightbox" onclick="handleLbClick(event)">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <button class="lb-nav lb-prev" id="lbPrev" onclick="lbDir(-1)">‹</button>
+  <img class="lb-img" id="lbImg" src="" alt="">
+  <button class="lb-nav lb-next" id="lbNext" onclick="lbDir(1)">›</button>
+  <div class="lb-counter" id="lbCounter"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  얍할라 가이드 — Discord 실시간 피드
+//  Firestore 컬렉션: yaphalla_guide_posts
+//  최신글 맨 위, 이미지 그리드, 라이트박스
+// ════════════════════════════════════════════
+
+const COLLECTION   = 'yaphalla_guide_posts';
+const PAGE_SIZE    = 20;
+
+let allPosts       = [];
+let lastDoc        = null;
+let isLoading      = false;
+let hasMore        = true;
+
+// ── 라이트박스 상태 ────────────────────────
+let lbImages       = [];
+let lbIndex        = 0;
+
+// ── 인증 — firebase_config.js의 updateGlobalUI 훅 사용 ──────────
+// (firebase_config.js가 onAuthStateChanged를 이미 처리하므로 중복 선언 제거)
+let _feedStarted = false;
+
+window.updateGlobalUI = (function(origFn) {
+  return function(data, user) {
+    // 원본 updateGlobalUI (헤더 유저명·사진 공통 처리) 먼저 실행
+    if (typeof origFn === 'function') origFn(data, user);
+
+    // 피드 최초 1회만 시작
+    if (_feedStarted) return;
+    _feedStarted = true;
+
+    // loadingOverlay 숨기기
+    const ol = document.getElementById('loadingOverlay');
+    if (ol) ol.style.display = 'none';
+
+    startFeed();
+  };
+})(window.updateGlobalUI);
+
+// ── 초기 피드 로드 ─────────────────────────
+function startFeed(){
+  isLoading = true;
+
+  firebase.firestore()
+    .collection(COLLECTION)
+    .where('visible','==',true)
+    .orderBy('discordTimestamp','desc')
+    .limit(PAGE_SIZE)
+    .onSnapshot(snap=>{
+      document.getElementById('skeletonArea').style.display='none';
+
+      allPosts = [];
+      snap.forEach(doc => allPosts.push({ id: doc.id, ...doc.data() }));
+      lastDoc = snap.docs[snap.docs.length - 1] || null;
+      hasMore = snap.docs.length >= PAGE_SIZE;
+
+      renderFeed();
+      isLoading = false;
+    }, err=>{
+      console.error('Feed error:', err);
+      document.getElementById('skeletonArea').style.display='none';
+      isLoading = false;
+    });
+}
+
+// ── 더보기 ────────────────────────────────
+async function loadMore(){
+  if(isLoading || !hasMore || !lastDoc) return;
+  isLoading = true;
+  const btn = document.getElementById('loadMoreBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+
+  try{
+    const snap = await firebase.firestore()
+      .collection(COLLECTION)
+      .where('visible','==',true)
+      .orderBy('discordTimestamp','desc')
+      .startAfter(lastDoc)
+      .limit(PAGE_SIZE)
+      .get();
+
+    const newPosts = [];
+    snap.forEach(doc => newPosts.push({ id: doc.id, ...doc.data() }));
+    lastDoc = snap.docs[snap.docs.length - 1] || lastDoc;
+    hasMore = snap.docs.length >= PAGE_SIZE;
+
+    allPosts = [...allPosts, ...newPosts];
+    renderFeed();
+  }catch(e){
+    console.error('LoadMore error:', e);
+  }
+
+  isLoading = false;
+  btn.disabled = false;
+  btn.textContent = 'Load More';
+}
+
+// ── 피드 렌더링 ───────────────────────────
+function renderFeed(){
+  const feed  = document.getElementById('feedList');
+  const empty = document.getElementById('emptyState');
+  const lmw   = document.getElementById('loadMoreWrap');
+
+  if(allPosts.length === 0){
+    feed.style.display  = 'none';
+    empty.style.display = 'block';
+    lmw.style.display   = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  feed.innerHTML = allPosts.map(buildCard).join('');
+  feed.style.display = '';
+
+  lmw.style.display = hasMore ? '' : 'none';
+}
+
+// ── 카드 빌더 ─────────────────────────────
+function buildCard(p){
+  /* 아바타 */
+  const avHtml = p.authorAvatar
+    ? `<img src="${escH(p.authorAvatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : `<span>${escH((p.authorName||'?')[0].toUpperCase())}</span>`;
+
+  /* 날짜 */
+  const dateStr = fmtDate(p.discordTimestamp || p.createdAt);
+
+  /* 채널 뱃지 */
+  const channelHtml = p.channelName
+    ? `<span class="card-channel">#${escH(p.channelName)}</span>` : '';
+
+  /* 본문 */
+  const bodyHtml = p.content
+    ? `<div class="card-body-text">${formatContent(p.content)}</div>` : '';
+
+  /* 이미지 그리드 */
+  const imgs = p.imageUrls || [];
+  let imgsHtml = '';
+  if(imgs.length > 0){
+    const postId = escH(p.id);
+    const allImgsJson = escH(JSON.stringify(imgs));
+    if(imgs.length === 1){
+      imgsHtml = `<div class="card-images"><div class="img-grid-1">
+        <img src="${escH(imgs[0])}" alt="" loading="lazy"
+             onclick="openLightbox(${allImgsJson},0)"
+             onerror="this.parentElement.style.display='none'">
+      </div></div>`;
+    } else {
+      const gridClass = imgs.length === 2 ? 'img-grid-2'
+                      : imgs.length === 3 ? 'img-grid-3' : 'img-grid-4';
+      const showCount = imgs.length <= 4 ? imgs.length : 4;
+      const tiles = imgs.slice(0, showCount).map((url, i) => {
+        const isLast = imgs.length > 4 && i === 3;
+        const inner  = `<img src="${escH(url)}" alt="" loading="lazy"
+                             onclick="openLightbox(${allImgsJson},${i})"
+                             onerror="this.parentElement.style.display='none'">`;
+        if(isLast){
+          return `<div class="img-more-wrap" onclick="openLightbox(${allImgsJson},3)">
+            ${inner}
+            <div class="img-more-overlay">+${imgs.length - 3}</div>
+          </div>`;
+        }
+        return inner;
+      }).join('');
+      imgsHtml = `<div class="card-images"><div class="${gridClass}">${tiles}</div></div>`;
+    }
+  }
+
+  return `
+  <div class="feed-card" data-id="${escH(p.id)}">
+    <div class="card-header">
+      <div class="card-avatar">${avHtml}</div>
+      <div class="card-author-info">
+        <div class="card-author">${escH(p.authorName||'?')}</div>
+        <div class="card-date">${dateStr}</div>
+      </div>
+      ${channelHtml}
+    </div>
+    ${bodyHtml}
+    ${imgsHtml}
+  </div>`;
+}
+
+// ── 라이트박스 ────────────────────────────
+function openLightbox(imgsJson, startIdx){
+  try{
+    lbImages = typeof imgsJson === 'string' ? JSON.parse(imgsJson) : imgsJson;
+  }catch(e){ return; }
+  lbIndex = startIdx || 0;
+  updateLightbox();
+  document.getElementById('lightbox').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function updateLightbox(){
+  const img  = document.getElementById('lbImg');
+  const cnt  = document.getElementById('lbCounter');
+  const prev = document.getElementById('lbPrev');
+  const next = document.getElementById('lbNext');
+  img.src    = lbImages[lbIndex] || '';
+  cnt.textContent = lbImages.length > 1 ? `${lbIndex+1} / ${lbImages.length}` : '';
+  prev.style.display = lbImages.length > 1 ? '' : 'none';
+  next.style.display = lbImages.length > 1 ? '' : 'none';
+}
+
+function lbDir(dir){
+  lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+  updateLightbox();
+}
+
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function handleLbClick(e){
+  if(e.target === document.getElementById('lightbox')) closeLightbox();
+}
+
+// ── 텍스트 포맷 ───────────────────────────
+function formatContent(t){
+  if(!t) return '';
+  let s = escH(t);
+  // 볼드 **text**
+  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  // 이탤릭 *text*
+  s = s.replace(/\*([^*\n]+?)\*/g, '<i>$1</i>');
+  // URL 링크화
+  s = s.replace(/(https?:\/\/[^\s<>"'\)\]]+)/g,
+    '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  // 줄바꿈
+  s = s.replace(/\n/g, '<br>');
+  return `<p>${s}</p>`;
+}
+
+// ── 날짜 포맷 ─────────────────────────────
+function fmtDate(ts){
+  try{
+    let d;
+    if(ts && ts.toDate)      d = ts.toDate();
+    else if(ts && ts.seconds) d = new Date(ts.seconds * 1000);
+    else if(typeof ts === 'number') d = new Date(ts);
+    else return '';
+    const now  = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if(diff < 60)    return 'just now';
+    if(diff < 3600)  return Math.floor(diff/60) + 'm ago';
+    if(diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    if(diff < 604800)return Math.floor(diff/86400) + 'd ago';
+    const mo = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${d.getFullYear()}.${mo}.${dy} ${hh}:${mm}`;
+  }catch(e){ return ''; }
+}
+
+// ── HTML 이스케이프 ───────────────────────
+function escH(s){
+  if(s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── 키보드 단축키 ─────────────────────────
+document.addEventListener('keydown', e => {
+  const lb = document.getElementById('lightbox');
+  if(!lb.classList.contains('active')) return;
+  if(e.key === 'Escape')      closeLightbox();
+  if(e.key === 'ArrowLeft')   lbDir(-1);
+  if(e.key === 'ArrowRight')  lbDir(1);
+});
+
+// ── 공통 ─────────────────────────────────
+function logout(){ firebase.auth().signOut().then(()=>{ location.href='login.html'; }); }
+function toggleNav(open){
+  const nav     = document.getElementById('sideNav');
+  const overlay = document.getElementById('overlay');
+  if(open){ nav.classList.add('active'); overlay.classList.add('active'); }
+  else    { nav.classList.remove('active'); overlay.classList.remove('active'); }
+}
+function handleLangChange(){
+  if(typeof window.openLangDropdown==='function'){ window.openLangDropdown(); return; }
+  const cur = localStorage.getItem('roider_lang')||'en';
+  const next = cur==='ko'?'en':'ko';
+  localStorage.setItem('roider_lang',next);
+  const btn = document.getElementById('langBtn');
+  if(btn) btn.textContent='🌐 '+next.toUpperCase();
+  if(typeof applyLanguage==='function') applyLanguage();
+}
+</script>
+</body>
+</html>
